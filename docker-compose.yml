@@ -1,0 +1,26 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: bupt-ecommerce-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: bupt_ecommerce
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+
+  redis:
+    image: redis:7.4
+    container_name: bupt-ecommerce-redis
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: bupt-ecommerce-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"

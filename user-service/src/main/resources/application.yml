@@ -1,6 +1,13 @@
 server:
   port: 8081
 
+app:
+  jwt:
+    secret: ${JWT_SECRET:bupt-ecommerce-dev-secret}
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:admin123456}
+
 spring:
   application:
     name: user-service

@@ -63,33 +63,98 @@ cd BUPT-Ecommerce
 9. `push-service`
 10. `simple-test-page`
 
-### 2.4 开发分支
+也可以直接运行统一启动脚本：
 
-建议固定分支：
-
-```text
-main
-dev
-feature/member-a-architecture
-feature/member-b-seckill-order
-feature/member-c-ai-push-demo
+```powershell
+.\scripts\start-local.ps1
 ```
 
-### 2.5 日常开发流程
+脚本会先拉起 MySQL、Redis、RabbitMQ，再按推荐顺序启动各个后端服务。
+
+### 2.4 开发分支
+
+三名成员固定分支：
 
 ```bash
 git checkout dev
 git pull origin dev
-git checkout -b feature/your-task-name
+git checkout -b feature/member-a-architecture
+git push -u origin feature/member-a-architecture
 ```
 
-开发完成后：
+```bash
+git checkout dev
+git pull origin dev
+git checkout -b feature/member-b-seckill-order
+git push -u origin feature/member-b-seckill-order
+```
+
+```bash
+git checkout dev
+git pull origin dev
+git checkout -b feature/member-c-ai-push-demo
+git push -u origin feature/member-c-ai-push-demo
+```
+
+分支对应关系：
+
+| 成员 | 分支 | 技术方向 |
+|---|---|---|
+| A | `feature/member-a-architecture` | 架构、Gateway、认证权限、接口契约、联调 |
+| B | `feature/member-b-seckill-order` | 商品、秒杀、Redis、MQ、订单、AI 咨询 |
+| C | `feature/member-c-ai-push-demo` | 推送、测试页面、Apifox、演示体验 |
+
+### 2.5 日常开发流程
+
+每天开始开发前：
+
+```bash
+git checkout dev
+git pull origin dev
+git checkout <自己的分支>
+git merge dev
+git status
+```
+
+如果 `dev` 还不存在，由组内先创建：
+
+```bash
+git checkout main
+git pull origin main
+git checkout -b dev
+git push -u origin dev
+```
+
+每天提交：
 
 ```bash
 git status
 git add .
-git commit -m "feat: xxx"
-git push origin feature/your-task-name
+git commit -m "feat: 完成xxx功能"
+git push origin <自己的分支>
+```
+
+每周结束：
+
+1. 三人先把各自分支同步最新 `dev`。
+2. 自测通过后，由负责人或对应成员把个人分支合并到 `dev`。
+3. 三人共同跑一遍周验收主线。
+4. 周验收通过后，再由负责人把 `dev` 合并到 `main`。
+
+```bash
+git checkout dev
+git pull origin dev
+git merge feature/member-a-architecture
+git merge feature/member-b-seckill-order
+git merge feature/member-c-ai-push-demo
+git push origin dev
+```
+
+```bash
+git checkout main
+git pull origin main
+git merge dev
+git push origin main
 ```
 
 ## 三、有效文档清单

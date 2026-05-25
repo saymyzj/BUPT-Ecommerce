@@ -1,6 +1,10 @@
 server:
   port: 8080
 
+app:
+  jwt:
+    secret: ${JWT_SECRET:bupt-ecommerce-dev-secret}
+
 spring:
   application:
     name: gateway-service
@@ -27,6 +31,50 @@ spring:
           uri: http://localhost:8085
           predicates:
             - Path=/api/push/**
+        - id: user-service-openapi
+          uri: http://localhost:8081
+          predicates:
+            - Path=/openapi/user
+          filters:
+            - RewritePath=/openapi/user, /v3/api-docs
+        - id: product-seckill-service-openapi
+          uri: http://localhost:8082
+          predicates:
+            - Path=/openapi/product-seckill
+          filters:
+            - RewritePath=/openapi/product-seckill, /v3/api-docs
+        - id: order-service-openapi
+          uri: http://localhost:8083
+          predicates:
+            - Path=/openapi/order
+          filters:
+            - RewritePath=/openapi/order, /v3/api-docs
+        - id: ai-service-openapi
+          uri: http://localhost:8084
+          predicates:
+            - Path=/openapi/ai
+          filters:
+            - RewritePath=/openapi/ai, /v3/api-docs
+        - id: push-service-openapi
+          uri: http://localhost:8085
+          predicates:
+            - Path=/openapi/push
+          filters:
+            - RewritePath=/openapi/push, /v3/api-docs
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: user-service
+        url: /openapi/user
+      - name: product-seckill-service
+        url: /openapi/product-seckill
+      - name: order-service
+        url: /openapi/order
+      - name: ai-service
+        url: /openapi/ai
+      - name: push-service
+        url: /openapi/push
 
 management:
   endpoints:

@@ -2,44 +2,69 @@ package com.bupt.ecommerce.product.controller;
 
 import com.bupt.ecommerce.common.api.ApiResponse;
 import com.bupt.ecommerce.common.api.PageResponse;
+import com.bupt.ecommerce.product.dto.CreateProductRequest;
+import com.bupt.ecommerce.product.dto.ProductResponse;
+import com.bupt.ecommerce.product.dto.SetStockRequest;
+import com.bupt.ecommerce.product.dto.StockResponse;
+import com.bupt.ecommerce.product.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
 @Tag(name = "02 商品与库存", description = "商品查询、创建和库存配置")
 public class ProductController {
 
+    private final ProductService productService;
+    private final Long defaultAdminId;
+
+    public ProductController(ProductService productService, @Value("${app.local-demo.default-admin-id}") Long defaultAdminId) {
+        this.productService = productService;
+        this.defaultAdminId = defaultAdminId;
+    }
+
     @GetMapping
     @Operation(summary = "商品分页查询", description = "PUBLIC 接口，分页返回商品列表")
-    public ApiResponse<PageResponse<Map<String, Object>>> page() {
-        return ApiResponse.success(new PageResponse<>(List.of(), 1, 10, 0));
+    public ApiResponse<PageResponse<ProductResponse>> page(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) String keyword
+    ) {
+        return ApiResponse.success(productService.page(page, pageSize, keyword));
     }
 
     @GetMapping("/{productId}")
     @Operation(summary = "商品详情", description = "PUBLIC 接口，按商品 ID 查询详情")
-    public ApiResponse<Map<String, Object>> detail(@PathVariable Long productId) {
-        return ApiResponse.success(Map.of("productId", productId, "name", "demo product", "price", 99.9));
+    public ApiResponse<ProductResponse> detail(@PathVariable Long productId) {
+        return ApiResponse.success(productService.detail(productId));
     }
 
     @PutMapping("/{productId}/stock")
     @Operation(summary = "设置库存", description = "ADMIN 接口，设置指定商品库存")
-    public ApiResponse<Map<String, Object>> stock(@PathVariable Long productId, @RequestBody Map<String, Object> request) {
-        return ApiResponse.success(Map.of("productId", productId, "stock", request.getOrDefault("stock", 0)));
+    public ApiResponse<StockResponse> stock(
+            @PathVariable Long productId,
+            @Valid @RequestBody SetStockRequest request
+    ) {
+        return ApiResponse.success(productService.setStock(productId, request));
     }
 
-    @org.springframework.web.bind.annotation.PostMapping
+    @PostMapping
     @Operation(summary = "创建商品", description = "ADMIN 接口，创建商品基础信息")
-    public ApiResponse<Map<String, Object>> create(@RequestBody Map<String, Object> request) {
-        return ApiResponse.success(Map.of("productId", 20001L, "name", request.get("name")));
+    public ApiResponse<ProductResponse> create(
+            @Valid @RequestBody CreateProductRequest request,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId
+    ) {
+        return ApiResponse.success(productService.create(request, userId == null ? defaultAdminId : userId));
     }
 }

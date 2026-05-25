@@ -4,4 +4,43 @@ server:
 spring:
   application:
     name: order-service
+  datasource:
+    url: jdbc:mysql://localhost:3306/bupt_ecommerce?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8
+    username: root
+    password: password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    listener:
+      simple:
+        acknowledge-mode: manual
+        retry:
+          enabled: true
+          max-attempts: 3
 
+app:
+  local-demo:
+    default-user-id: 10001
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

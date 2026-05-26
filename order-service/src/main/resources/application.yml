@@ -37,7 +37,12 @@ spring:
 
 app:
   local-demo:
+    enable-default-user: true
     default-user-id: 10001
+  order-compensation:
+    enabled: true
+    fixed-delay-ms: 60000
+    max-attempts: 6
 
 management:
   endpoints:

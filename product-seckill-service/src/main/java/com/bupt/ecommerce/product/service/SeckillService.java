@@ -112,7 +112,7 @@ public class SeckillService {
         if (product.getStatus() != ProductStatus.ON_SALE) {
             throw new BusinessException(ErrorCode.CONFLICT);
         }
-        ProductStock stock = stockRepository.findByProductId(product.getId())
+        ProductStock stock = stockRepository.findByProductIdForUpdate(product.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         if (request.seckillStock() > stock.getAvailableStock()) {
             throw new BusinessException(ErrorCode.STOCK_NOT_ENOUGH);
@@ -133,6 +133,7 @@ public class SeckillService {
         activity.setCreatedAt(now);
         activity.setUpdatedAt(now);
         SeckillActivity saved = activityRepository.save(activity);
+        reserveStock(stock, request.seckillStock(), now);
         preheat(saved);
         return SeckillActivityResponse.from(saved);
     }
@@ -265,6 +266,16 @@ public class SeckillService {
         redisTemplate.delete(SeckillRedisKeys.user(activityId, userId));
         String failed = writeResultJson(new SeckillResultResponse(activityId, "FAILED", null, null, "MQ 投递失败"));
         redisTemplate.opsForValue().set(SeckillRedisKeys.result(activityId, userId), failed, Duration.ofSeconds(resultTtlSeconds));
+    }
+
+    private void reserveStock(ProductStock stock, Integer seckillStock, LocalDateTime now) {
+        int availableStock = stock.getAvailableStock() == null ? 0 : stock.getAvailableStock();
+        int reservedStock = stock.getReservedStock() == null ? 0 : stock.getReservedStock();
+        stock.setAvailableStock(availableStock - seckillStock);
+        stock.setReservedStock(reservedStock + seckillStock);
+        stock.setVersion(stock.getVersion() == null ? 0L : stock.getVersion() + 1);
+        stock.setUpdatedAt(now);
+        stockRepository.save(stock);
     }
 
     private void mapLuaFailure(Long result) {

@@ -35,6 +35,7 @@ app:
   order-service:
     base-url: http://localhost:8083
   local-demo:
+    enable-default-user: true
     default-user-id: 10001
     default-admin-id: 1
   seckill:

@@ -1,7 +1,9 @@
 package com.bupt.ecommerce.order.controller;
 
 import com.bupt.ecommerce.common.api.ApiResponse;
+import com.bupt.ecommerce.common.api.ErrorCode;
 import com.bupt.ecommerce.common.api.PageResponse;
+import com.bupt.ecommerce.common.exception.BusinessException;
 import com.bupt.ecommerce.order.dto.OrderResponse;
 import com.bupt.ecommerce.order.dto.SeckillResultResponse;
 import com.bupt.ecommerce.order.service.OrderService;
@@ -22,37 +24,43 @@ public class OrderController {
 
     private final OrderService orderService;
     private final Long defaultUserId;
+    private final boolean enableDefaultUser;
 
-    public OrderController(OrderService orderService, @Value("${app.local-demo.default-user-id}") Long defaultUserId) {
+    public OrderController(
+            OrderService orderService,
+            @Value("${app.local-demo.default-user-id}") Long defaultUserId,
+            @Value("${app.local-demo.enable-default-user:true}") boolean enableDefaultUser
+    ) {
         this.orderService = orderService;
         this.defaultUserId = defaultUserId;
+        this.enableDefaultUser = enableDefaultUser;
     }
 
     @GetMapping
     @Operation(summary = "订单列表", description = "CUSTOMER 接口，分页查询当前用户订单")
     public ApiResponse<PageResponse<OrderResponse>> page(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
             @RequestHeader(value = "X-User-Id", required = false) Long userId
     ) {
-        return ApiResponse.success(orderService.page(userId == null ? defaultUserId : userId, page, pageSize));
+        return ApiResponse.success(orderService.page(resolveUserId(userId), page, pageSize));
     }
 
     @GetMapping("/{orderId}")
     @Operation(summary = "订单详情", description = "CUSTOMER 接口，查询订单详情")
     public ApiResponse<OrderResponse> detail(
-            @PathVariable Long orderId,
+            @PathVariable("orderId") Long orderId,
             @RequestHeader(value = "X-User-Id", required = false) Long userId
     ) {
-        return ApiResponse.success(orderService.detail(orderId, userId == null ? defaultUserId : userId));
+        return ApiResponse.success(orderService.detail(orderId, resolveUserId(userId)));
     }
 
     @GetMapping("/admin")
     @Operation(summary = "管理员订单查询", description = "ADMIN 接口，分页查询订单")
     public ApiResponse<PageResponse<OrderResponse>> adminPage(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize,
-            @RequestParam(required = false) String status
+            @RequestParam(value = "page", defaultValue = "1") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(value = "status", required = false) String status
     ) {
         return ApiResponse.success(orderService.adminPage(page, pageSize, status));
     }
@@ -60,9 +68,19 @@ public class OrderController {
     @GetMapping("/internal/seckill-result")
     @Operation(summary = "内部查询秒杀订单结果", description = "服务间接口，按活动和用户回查订单结果")
     public ApiResponse<SeckillResultResponse> seckillResult(
-            @RequestParam Long activityId,
-            @RequestParam Long userId
+            @RequestParam("activityId") Long activityId,
+            @RequestParam("userId") Long userId
     ) {
         return ApiResponse.success(orderService.findSeckillResult(activityId, userId));
+    }
+
+    private Long resolveUserId(Long userId) {
+        if (userId != null) {
+            return userId;
+        }
+        if (enableDefaultUser) {
+            return defaultUserId;
+        }
+        throw new BusinessException(ErrorCode.UNAUTHORIZED);
     }
 }

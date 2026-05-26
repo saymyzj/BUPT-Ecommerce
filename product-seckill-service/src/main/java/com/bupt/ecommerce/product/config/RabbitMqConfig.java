@@ -13,6 +13,7 @@ import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.interceptor.RetryOperationsInterceptor;
@@ -63,14 +64,20 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public Binding seckillOrderBinding(Queue seckillOrderCreateQueue, TopicExchange seckillOrderExchange) {
+    public Binding seckillOrderBinding(
+            @Qualifier("seckillOrderCreateQueue") Queue seckillOrderCreateQueue,
+            TopicExchange seckillOrderExchange
+    ) {
         return BindingBuilder.bind(seckillOrderCreateQueue)
                 .to(seckillOrderExchange)
                 .with(ORDER_CREATE_ROUTING_KEY);
     }
 
     @Bean
-    public Binding seckillOrderDlqBinding(Queue seckillOrderCreateDlq, DirectExchange seckillOrderDlx) {
+    public Binding seckillOrderDlqBinding(
+            @Qualifier("seckillOrderCreateDlq") Queue seckillOrderCreateDlq,
+            DirectExchange seckillOrderDlx
+    ) {
         return BindingBuilder.bind(seckillOrderCreateDlq)
                 .to(seckillOrderDlx)
                 .with(ORDER_CREATE_QUEUE);

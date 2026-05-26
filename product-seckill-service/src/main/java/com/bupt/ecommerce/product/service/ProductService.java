@@ -86,11 +86,15 @@ public class ProductService {
         productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
 
-        ProductStock stock = stockRepository.findByProductId(productId).orElseGet(ProductStock::new);
+        ProductStock stock = stockRepository.findByProductIdForUpdate(productId).orElseGet(ProductStock::new);
+        int reservedStock = stock.getReservedStock() == null ? 0 : stock.getReservedStock();
+        if (request.stock() < reservedStock) {
+            throw new BusinessException(ErrorCode.CONFLICT);
+        }
         stock.setProductId(productId);
         stock.setTotalStock(request.stock());
-        stock.setAvailableStock(request.stock());
-        stock.setReservedStock(0);
+        stock.setAvailableStock(request.stock() - reservedStock);
+        stock.setReservedStock(reservedStock);
         stock.setVersion(stock.getVersion() == null ? 0L : stock.getVersion() + 1);
         stock.setUpdatedAt(LocalDateTime.now());
         return StockResponse.from(stockRepository.save(stock));

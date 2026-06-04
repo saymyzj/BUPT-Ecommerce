@@ -40,7 +40,7 @@
 - [x] 配置 LLM 时调用 OpenAI 兼容 `chat/completions` 接口。
 - [x] AI 请求基于商品详情上下文和用户问题构造。
 - [x] 增加本地内存问答缓存，返回 `cacheHit`。
-- [ ] 使用真实 LLM 配置完成一次端到端 AI 咨询截图。
+- [x] 使用真实 LLM 配置完成一次端到端 AI 咨询截图。
 - [ ] 后续如时间允许，将内存缓存替换或扩展为 Redis key：`ai:product:qa:{productId}:{questionHash}`。
 - [ ] 补充用户级限流、排队、超时降级的报告截图或说明。
 
@@ -81,8 +81,8 @@
 - [x] `mvn test` 通过，所有后端模块编译成功。
 - [x] 测试页 JavaScript 语法检查通过。
 - [x] `git diff --check` 无空白错误。
-- [ ] 本地启动 MySQL、Redis、RabbitMQ 后完成真实全链路联调。
-- [ ] 使用测试页验证：登录 -> 建立推送 -> 发起秒杀 -> 收到推送 -> 查询订单 -> AI 咨询。
+- [x] 本地启动 MySQL、Redis、RabbitMQ 后完成真实全链路联调。
+- [x] 使用测试页验证：登录 -> 建立推送 -> 发起秒杀 -> 收到推送 -> 查询订单 -> AI 咨询。
 - [ ] 使用 Apifox 验证完整演示流程。
 
 ## 7. Git

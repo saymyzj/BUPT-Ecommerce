@@ -11,5 +11,5 @@ app:
   llm:
     base-url: ${LLM_BASE_URL:}
     api-key: ${LLM_API_KEY:}
-    model: ${LLM_MODEL:gpt-4o-mini}
+    model: ${LLM_MODEL:deepseek-v4-flash}
     timeout-ms: 8000

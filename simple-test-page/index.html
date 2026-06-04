@@ -402,6 +402,15 @@
       }
     }
 
+    function requireInput(inputId, label) {
+      const value = $(inputId).value.trim();
+      if (!value) {
+        log("缺少必要参数", `请先填写或生成 ${label}。`);
+        return null;
+      }
+      return value;
+    }
+
     async function register() {
       await request("POST", "/api/auth/register", {
         username: $("username").value,
@@ -445,14 +454,18 @@
     }
 
     async function setStock() {
-      await request("PUT", `/api/products/${$("productId").value}/stock`, {
+      const productId = requireInput("productId", "productId");
+      if (!productId) return;
+      await request("PUT", `/api/products/${productId}/stock`, {
         stock: Number($("stock").value)
       }, "admin");
     }
 
     async function createActivity() {
+      const productId = requireInput("productId", "productId");
+      if (!productId) return;
       const payload = await request("POST", "/api/seckill/activities", {
-        productId: Number($("productId").value),
+        productId: Number(productId),
         startTime: nowLocal(-1),
         endTime: nowLocal(60),
         seckillPrice: Number($("seckillPrice").value),
@@ -462,7 +475,9 @@
     }
 
     async function seckill() {
-      const payload = await request("POST", `/api/seckill/activities/${$("activityId").value}/orders`, {
+      const activityId = requireInput("activityId", "activityId");
+      if (!activityId) return;
+      const payload = await request("POST", `/api/seckill/activities/${activityId}/orders`, {
         quantity: Number($("quantity").value)
       });
       $("stateSeckill").textContent = payload?.data?.status || payload?.message || "-";
@@ -472,7 +487,9 @@
     }
 
     async function consultAi() {
-      const payload = await request("POST", `/api/ai/products/${$("productId").value}/consult`, {
+      const productId = requireInput("productId", "productId");
+      if (!productId) return;
+      const payload = await request("POST", `/api/ai/products/${productId}/consult`, {
         question: $("question").value
       });
       $("stateAi").textContent = payload?.data?.status || payload?.message || "-";
@@ -553,10 +570,22 @@
     $("connectPushBtn").onclick = connectPush;
     $("disconnectPushBtn").onclick = () => disconnectPush();
     $("listProductsBtn").onclick = () => request("GET", `/api/products?page=1&pageSize=10&keyword=${encodeURIComponent($("keyword").value)}`, undefined, "none");
-    $("productDetailBtn").onclick = () => request("GET", `/api/products/${$("productId").value}`, undefined, "none");
-    $("activityDetailBtn").onclick = () => request("GET", `/api/seckill/activities/${$("activityId").value}`, undefined, "none");
+    $("productDetailBtn").onclick = () => {
+      const productId = requireInput("productId", "productId");
+      if (!productId) return;
+      request("GET", `/api/products/${productId}`, undefined, "none");
+    };
+    $("activityDetailBtn").onclick = () => {
+      const activityId = requireInput("activityId", "activityId");
+      if (!activityId) return;
+      request("GET", `/api/seckill/activities/${activityId}`, undefined, "none");
+    };
     $("seckillBtn").onclick = seckill;
-    $("seckillResultBtn").onclick = () => request("GET", `/api/seckill/activities/${$("activityId").value}/result`);
+    $("seckillResultBtn").onclick = () => {
+      const activityId = requireInput("activityId", "activityId");
+      if (!activityId) return;
+      request("GET", `/api/seckill/activities/${activityId}/result`);
+    };
     $("ordersBtn").onclick = async () => {
       const payload = await request("GET", "/api/orders?page=1&pageSize=10");
       const first = payload?.data?.records?.[0];
@@ -564,7 +593,9 @@
       updateState();
     };
     $("orderDetailBtn").onclick = async () => {
-      const payload = await request("GET", `/api/orders/${$("orderId").value}`);
+      const orderId = requireInput("orderId", "orderId");
+      if (!orderId) return;
+      const payload = await request("GET", `/api/orders/${orderId}`);
       $("stateOrder").textContent = payload?.data?.status || "-";
     };
     $("adminOrdersBtn").onclick = () => request("GET", "/api/orders/admin?page=1&pageSize=10&status=CREATED", undefined, "admin");

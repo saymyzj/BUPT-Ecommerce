@@ -28,7 +28,7 @@ public class AiController {
     @PostMapping("/{productId}/consult")
     @Operation(summary = "商品咨询", description = "CUSTOMER / ADMIN 接口，返回商品咨询回答")
     public ApiResponse<Map<String, Object>> consult(
-            @PathVariable Long productId,
+            @PathVariable("productId") Long productId,
             @Valid @RequestBody ConsultRequest request
     ) {
         return aiConsultService.consult(productId, request.question());

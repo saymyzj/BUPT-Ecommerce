@@ -39,6 +39,8 @@ app:
   local-demo:
     enable-default-user: true
     default-user-id: 10001
+  push-service:
+    base-url: http://localhost:8085
   order-compensation:
     enabled: true
     fixed-delay-ms: 60000

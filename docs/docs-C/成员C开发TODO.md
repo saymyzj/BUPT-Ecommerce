@@ -29,9 +29,9 @@
 - [x] `order-service` 在 MQ 消费并订单落库后调用推送服务。
 - [x] 推送事件使用 `ORDER_CREATED`，并携带 `activityId`、`orderId`、`orderNo`、`userId`、`status`、`message`。
 - [x] 测试页只有收到 `order-result` 事件后才更新订单成功状态。
-- [ ] 联调验证 A 用户不会收到 B 用户的订单事件。
-- [ ] 联调验证 SSE 断开后重新连接仍可继续接收新订单事件。
-- [ ] 补充推送失败时的演示说明：如果推送失败，仍可通过订单查询验证结果。
+- [x] 联调验证 A 用户不会收到 B 用户的订单事件。
+- [x] 联调验证 SSE 断开后重新连接仍可继续接收新订单事件。
+- [x] 补充推送失败时的演示说明：如果推送失败，仍可通过订单查询验证结果。
 
 ## 3. AI 智能导购
 
@@ -41,8 +41,8 @@
 - [x] AI 请求基于商品详情上下文和用户问题构造。
 - [x] 增加本地内存问答缓存，返回 `cacheHit`。
 - [x] 使用真实 LLM 配置完成一次端到端 AI 咨询截图。
-- [ ] 后续如时间允许，将内存缓存替换或扩展为 Redis key：`ai:product:qa:{productId}:{questionHash}`。
-- [ ] 补充用户级限流、排队、超时降级的报告截图或说明。
+- [x] 后续如时间允许，将内存缓存替换或扩展为 Redis key：`ai:product:qa:{productId}:{questionHash}`。
+- [x] 补充用户级限流、排队、超时降级的报告截图或说明。
 
 ## 4. Apifox
 
@@ -57,24 +57,28 @@
   - `08 完整演示流程`
 - [x] 在 `docs/docs-C/Apifox测试指南.md` 中记录环境变量和提取字段。
 - [x] 在 `apifox/README.md` 中记录导出文件存放规则。
-- [ ] 在 Apifox 客户端中创建完整集合。
-- [ ] 设置环境变量：`baseUrl`、`token`、`adminToken`、`userId`、`productId`、`activityId`、`orderId`。
-- [ ] 为登录、创建商品、创建活动、订单查询配置变量提取。
-- [ ] 导出 Apifox 集合文件并放入 `apifox/`。
-- [ ] 使用 Apifox 跑通 `08 完整演示流程`。
+- [x] 在 Apifox 客户端中创建完整集合。
+- [x] 设置环境变量：`baseUrl`、`token`、`adminToken`、`userId`、`productId`、`activityId`、`orderId`。
+- [x] 为登录、创建商品、创建活动、订单查询配置变量提取。
+- [x] 导出 Apifox 集合文件并放入 `apifox/`。
+- [x] 使用 Apifox 跑通 `08 完整演示流程`。
 
 ## 5. 演示材料
 
 - [x] 编写 `docs/docs-C/演示视频脚本.md`。
-- [ ] 准备服务启动截图。
-- [ ] 准备测试页登录成功截图。
-- [ ] 准备管理员创建商品、设置库存、创建活动截图。
-- [ ] 准备秒杀返回 `QUEUEING` 截图。
-- [ ] 准备 SSE 收到 `ORDER_CREATED` 推送截图。
-- [ ] 准备用 `orderId` 查询订单详情截图。
-- [ ] 准备 AI 咨询成功或明确降级截图。
-- [ ] 准备 Apifox 8 个分组和环境变量截图。
-- [ ] 录制 3-5 分钟演示视频。
+- [x] 准备服务启动截图。
+- [x] 准备测试页登录成功截图。
+- [x] 准备管理员创建商品、设置库存、创建活动截图。
+- [x] 准备秒杀返回 `QUEUEING` 截图。
+- [x] 准备 SSE 收到 `ORDER_CREATED` 推送截图。
+- [x] 准备用 `orderId` 查询订单详情截图。
+- [x] 准备 AI 咨询成功或明确降级截图。
+- [x] 准备 Apifox 8 个分组和环境变量截图。
+- [x] 录制 3-5 分钟演示视频。
+- [x] 补齐 `docs/docs-C/第1周任务报告.md`。
+- [x] 补齐 `docs/docs-C/第1周测试报告.md`。
+- [x] 补齐 `docs/docs-C/第2周任务报告.md`。
+- [x] 补齐 `docs/docs-C/第2周测试报告.md`。
 
 ## 6. 验证
 
@@ -83,7 +87,7 @@
 - [x] `git diff --check` 无空白错误。
 - [x] 本地启动 MySQL、Redis、RabbitMQ 后完成真实全链路联调。
 - [x] 使用测试页验证：登录 -> 建立推送 -> 发起秒杀 -> 收到推送 -> 查询订单 -> AI 咨询。
-- [ ] 使用 Apifox 验证完整演示流程。
+- [x] 使用 Apifox 验证完整演示流程。
 
 ## 7. Git
 

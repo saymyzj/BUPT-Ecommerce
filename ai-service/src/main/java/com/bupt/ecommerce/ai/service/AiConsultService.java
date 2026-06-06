@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,7 +14,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,24 +35,30 @@ public class AiConsultService {
     private final String llmBaseUrl;
     private final String llmApiKey;
     private final String llmModel;
+    private final StringRedisTemplate redisTemplate;
+    private final Duration cacheTtl;
     private final Map<String, String> cache = new ConcurrentHashMap<>();
 
     public AiConsultService(
             RestTemplateBuilder restTemplateBuilder,
+            StringRedisTemplate redisTemplate,
             @Value("${app.product-service.base-url:http://localhost:8082}") String productServiceBaseUrl,
             @Value("${app.llm.base-url:}") String llmBaseUrl,
             @Value("${app.llm.api-key:}") String llmApiKey,
             @Value("${app.llm.model:gpt-4o-mini}") String llmModel,
-            @Value("${app.llm.timeout-ms:8000}") long timeoutMs
+            @Value("${app.llm.timeout-ms:8000}") long timeoutMs,
+            @Value("${app.ai.cache.ttl-seconds:3600}") long cacheTtlSeconds
     ) {
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofMillis(timeoutMs))
                 .setReadTimeout(Duration.ofMillis(timeoutMs))
                 .build();
+        this.redisTemplate = redisTemplate;
         this.productServiceBaseUrl = productServiceBaseUrl;
         this.llmBaseUrl = llmBaseUrl == null ? "" : llmBaseUrl.strip();
         this.llmApiKey = llmApiKey == null ? "" : llmApiKey.strip();
         this.llmModel = llmModel;
+        this.cacheTtl = Duration.ofSeconds(Math.max(cacheTtlSeconds, 60));
     }
 
     public ApiResponse<Map<String, Object>> consult(Long productId, String question) {
@@ -55,8 +66,9 @@ public class AiConsultService {
             return ApiResponse.failure(ErrorCode.BAD_REQUEST.code(), ErrorCode.BAD_REQUEST.message());
         }
 
-        String cacheKey = productId + ":" + question.strip().toLowerCase();
-        String cached = cache.get(cacheKey);
+        String normalizedQuestion = question.strip();
+        String cacheKey = cacheKey(productId, normalizedQuestion);
+        String cached = cachedAnswer(cacheKey);
         if (cached != null) {
             return ApiResponse.success(Map.of(
                     "answer", cached,
@@ -71,8 +83,8 @@ public class AiConsultService {
 
         try {
             String productContext = loadProductContext(productId);
-            String answer = requestLlm(productContext, question.strip());
-            cache.put(cacheKey, answer);
+            String answer = requestLlm(productContext, normalizedQuestion);
+            cacheAnswer(cacheKey, answer);
             return ApiResponse.success(Map.of(
                     "answer", answer,
                     "status", "SUCCESS",
@@ -141,6 +153,45 @@ public class AiConsultService {
         }
         String baseUrl = llmBaseUrl.endsWith("/") ? llmBaseUrl.substring(0, llmBaseUrl.length() - 1) : llmBaseUrl;
         return baseUrl + "/v1/chat/completions";
+    }
+
+    private String cachedAnswer(String cacheKey) {
+        String localAnswer = cache.get(cacheKey);
+        if (localAnswer != null) {
+            return localAnswer;
+        }
+        try {
+            String redisAnswer = redisTemplate.opsForValue().get(cacheKey);
+            if (redisAnswer != null) {
+                cache.put(cacheKey, redisAnswer);
+                return redisAnswer;
+            }
+        } catch (RuntimeException ex) {
+            log.warn("ai redis cache read failed key={} reason={}", cacheKey, ex.getMessage());
+        }
+        return null;
+    }
+
+    private void cacheAnswer(String cacheKey, String answer) {
+        cache.put(cacheKey, answer);
+        try {
+            redisTemplate.opsForValue().set(cacheKey, answer, cacheTtl);
+        } catch (RuntimeException ex) {
+            log.warn("ai redis cache write failed key={} reason={}", cacheKey, ex.getMessage());
+        }
+    }
+
+    private String cacheKey(Long productId, String question) {
+        return "ai:product:qa:" + productId + ":" + sha256(question.toLowerCase());
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 not available", ex);
+        }
     }
 
     private ApiResponse<Map<String, Object>> fallback(Long productId, String question, boolean missingConfig) {

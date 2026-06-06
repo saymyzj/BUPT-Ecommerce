@@ -13,3 +13,6 @@ app:
     api-key: ${LLM_API_KEY:}
     model: ${LLM_MODEL:deepseek-v4-flash}
     timeout-ms: 8000
+  ai:
+    cache:
+      ttl-seconds: 3600

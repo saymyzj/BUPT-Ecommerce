@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $logRoot = Join-Path $root "logs\local-start"
 New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
+& (Join-Path $PSScriptRoot "load-env.ps1") -Root $root
 
 function Start-ServiceProcess {
     param(

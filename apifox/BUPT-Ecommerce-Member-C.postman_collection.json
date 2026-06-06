@@ -1,0 +1,889 @@
+{
+  "info": {
+    "name": "BUPT Ecommerce - Member C",
+    "_postman_id": "b7f44b5e-41c0-4d7c-9f61-member-c",
+    "description": "Member C Apifox collection. All requests use Gateway {{baseUrl}} and follow docs/API????.md and docs/Apifox????.md. The complete demo flow includes user register before login.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "01 认证与用户",
+      "item": [
+        {
+          "name": "用户注册",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"13800000000\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "PUBLIC. If code=409, the username already exists; change {{username}} or login directly."
+          }
+        },
+        {
+          "name": "用户登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) {",
+                  "  pm.environment.set('token', json.data.token);",
+                  "  if (json.data.user) pm.environment.set('userId', json.data.user.userId);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "PUBLIC. Extracts token and userId."
+          }
+        },
+        {
+          "name": "管理员登录",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('adminToken', json.data.token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/admin/login",
+            "description": "PUBLIC. Extracts adminToken."
+          }
+        },
+        {
+          "name": "当前用户",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/users/me",
+            "description": "CUSTOMER/ADMIN."
+          }
+        },
+        {
+          "name": "用户注销",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": "CUSTOMER/ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 商品与库存",
+      "item": [
+        {
+          "name": "创建商品",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('productId', json.data.productId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"秒杀耳机\",\n  \"price\": 699,\n  \"description\": \"低延迟无线耳机，适合学生学习和通勤。\"\n}"
+            },
+            "url": "{{baseUrl}}/api/products",
+            "description": "ADMIN. Extracts productId."
+          }
+        },
+        {
+          "name": "商品列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products?page=1&pageSize=10&keyword=",
+            "description": "PUBLIC."
+          }
+        },
+        {
+          "name": "商品详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/products/{{productId}}",
+            "description": "PUBLIC."
+          }
+        },
+        {
+          "name": "设置库存",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock\": 100\n}"
+            },
+            "url": "{{baseUrl}}/api/products/{{productId}}/stock",
+            "description": "ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 秒杀活动",
+      "item": [
+        {
+          "name": "创建秒杀活动",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('activityId', json.data.activityId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"startTime\": \"2026-06-06T00:00:00\",\n  \"endTime\": \"2026-06-30T23:59:59\",\n  \"seckillPrice\": 199,\n  \"seckillStock\": 20\n}"
+            },
+            "url": "{{baseUrl}}/api/seckill/activities",
+            "description": "ADMIN. Extracts activityId."
+          }
+        },
+        {
+          "name": "秒杀活动详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/seckill/activities/{{activityId}}",
+            "description": "PUBLIC."
+          }
+        },
+        {
+          "name": "发起秒杀",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/seckill/activities/{{activityId}}/orders",
+            "description": "CUSTOMER. QUEUEING only means the request entered MQ; it is not an order-created proof."
+          }
+        },
+        {
+          "name": "查询秒杀结果",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data && json.data.orderId) pm.environment.set('orderId', json.data.orderId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/seckill/activities/{{activityId}}/result",
+            "description": "CUSTOMER. Extracts orderId when status is CREATED."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 订单查询",
+      "item": [
+        {
+          "name": "我的订单列表",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) {",
+                  "  const list = json.data.records || json.data.list || json.data.content || [];",
+                  "  if (list.length > 0) pm.environment.set('orderId', list[0].orderId || list[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?page=1&pageSize=10",
+            "description": "CUSTOMER. Extracts first orderId when present."
+          }
+        },
+        {
+          "name": "订单详情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}",
+            "description": "CUSTOMER."
+          }
+        },
+        {
+          "name": "管理员订单列表",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/admin?page=1&pageSize=10&status=CREATED",
+            "description": "ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 AI 智能导购",
+      "item": [
+        {
+          "name": "商品 AI 咨询",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"这款商品适合学生党购买吗？\"\n}"
+            },
+            "url": "{{baseUrl}}/api/ai/products/{{productId}}/consult",
+            "description": "CUSTOMER/ADMIN. SUCCESS means real LLM path. FALLBACK with code=30001 means configured degradation."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 实时推送",
+      "item": [
+        {
+          "name": "订单推送 SSE 订阅",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": "{{baseUrl}}/api/push/orders/subscribe",
+            "description": "CUSTOMER. This is a long-lived SSE request. Use simple-test-page/index.html for the final push demo because it continuously reads ORDER_CREATED events."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 管理员流程",
+      "description": "Run in order: admin login, create product, set stock, create activity.",
+      "item": [
+        {
+          "name": "1 管理员登录",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/admin/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('adminToken', json.data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2 创建商品",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"秒杀耳机\",\n  \"price\": 699,\n  \"description\": \"低延迟无线耳机，适合学生学习和通勤。\"\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('productId', json.data.productId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3 设置库存",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock\": 100\n}"
+            },
+            "url": "{{baseUrl}}/api/products/{{productId}}/stock"
+          }
+        },
+        {
+          "name": "4 创建秒杀活动",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"startTime\": \"2026-06-06T00:00:00\",\n  \"endTime\": \"2026-06-30T23:59:59\",\n  \"seckillPrice\": 199,\n  \"seckillStock\": 20\n}"
+            },
+            "url": "{{baseUrl}}/api/seckill/activities"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('activityId', json.data.activityId);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 完整演示流程",
+      "description": "Run HTTP requests in order. Keep simple-test-page/index.html open for the SSE push step.",
+      "item": [
+        {
+          "name": "1 管理员登录并保存 adminToken",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/admin/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('adminToken', json.data.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2 创建商品并保存 productId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"秒杀耳机\",\n  \"price\": 699,\n  \"description\": \"低延迟无线耳机，适合学生学习和通勤。\"\n}"
+            },
+            "url": "{{baseUrl}}/api/products"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('productId', json.data.productId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3 设置库存",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock\": 100\n}"
+            },
+            "url": "{{baseUrl}}/api/products/{{productId}}/stock"
+          }
+        },
+        {
+          "name": "4 创建秒杀活动并保存 activityId",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"startTime\": \"2026-06-06T00:00:00\",\n  \"endTime\": \"2026-06-30T23:59:59\",\n  \"seckillPrice\": 199,\n  \"seckillStock\": 20\n}"
+            },
+            "url": "{{baseUrl}}/api/seckill/activities"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) pm.environment.set('activityId', json.data.activityId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5 用户注册（首次运行需要）",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"13800000000\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register",
+            "description": "首次运行或 user-service 重启后需要先注册普通用户。如果返回 code=409，说明用户已存在，可以继续执行下一步登录。"
+          }
+        },
+        {
+          "name": "6 用户登录并保存 token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) {",
+                  "  pm.environment.set('token', json.data.token);",
+                  "  if (json.data.user) pm.environment.set('userId', json.data.user.userId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7 SSE 订阅说明",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "text/event-stream"
+              }
+            ],
+            "url": "{{baseUrl}}/api/push/orders/subscribe",
+            "description": "Open simple-test-page/index.html and click SSE connect before running the seckill request."
+          }
+        },
+        {
+          "name": "8 发起秒杀",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quantity\": 1\n}"
+            },
+            "url": "{{baseUrl}}/api/seckill/activities/{{activityId}}/orders",
+            "description": "Expected response: code=0, message=queued, data.status=QUEUEING."
+          }
+        },
+        {
+          "name": "9 查询秒杀结果并保存 orderId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/seckill/activities/{{activityId}}/result"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data && json.data.orderId) pm.environment.set('orderId', json.data.orderId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 查询订单列表并兜底保存 orderId",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders?page=1&pageSize=10"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.code === 0 && json.data) {",
+                  "  const list = json.data.records || json.data.list || json.data.content || [];",
+                  "  if (list.length > 0) pm.environment.set('orderId', list[0].orderId || list[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 查询订单详情",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "12 AI 商品咨询",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"这款商品适合学生党购买吗？\"\n}"
+            },
+            "url": "{{baseUrl}}/api/ai/products/{{productId}}/consult"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "alice",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "123456",
+      "type": "string"
+    },
+    {
+      "key": "adminUsername",
+      "value": "admin",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin123456",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "activityId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

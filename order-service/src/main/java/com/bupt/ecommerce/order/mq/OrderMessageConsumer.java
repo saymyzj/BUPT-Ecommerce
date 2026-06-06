@@ -3,6 +3,7 @@ package com.bupt.ecommerce.order.mq;
 import com.bupt.ecommerce.order.config.RabbitMqConfig;
 import com.bupt.ecommerce.order.dto.OrderCreateMessage;
 import com.bupt.ecommerce.order.entity.Order;
+import com.bupt.ecommerce.order.push.OrderPushClient;
 import com.bupt.ecommerce.order.service.OrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
@@ -22,10 +23,12 @@ public class OrderMessageConsumer {
     private static final Logger log = LoggerFactory.getLogger(OrderMessageConsumer.class);
 
     private final OrderService orderService;
+    private final OrderPushClient orderPushClient;
     private final ObjectMapper objectMapper;
 
-    public OrderMessageConsumer(OrderService orderService, ObjectMapper objectMapper) {
+    public OrderMessageConsumer(OrderService orderService, OrderPushClient orderPushClient, ObjectMapper objectMapper) {
         this.orderService = orderService;
+        this.orderPushClient = orderPushClient;
         this.objectMapper = objectMapper;
     }
 
@@ -43,6 +46,7 @@ public class OrderMessageConsumer {
         try {
             Order order = orderService.createFromMessage(message, payload);
             orderService.writeCreatedResult(order);
+            orderPushClient.publishCreated(order);
             channel.basicAck(deliveryTag, false);
             log.info("created seckill order orderNo={} messageId={}", order.getOrderNo(), message.messageId());
         } catch (Exception ex) {

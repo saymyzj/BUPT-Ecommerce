@@ -4,6 +4,8 @@ import com.bupt.ecommerce.common.api.ApiResponse;
 import com.bupt.ecommerce.common.api.ErrorCode;
 import com.bupt.ecommerce.common.api.PageResponse;
 import com.bupt.ecommerce.common.exception.BusinessException;
+import com.bupt.ecommerce.common.security.AuthHeaders;
+import com.bupt.ecommerce.common.security.Role;
 import com.bupt.ecommerce.product.dto.CreateProductRequest;
 import com.bupt.ecommerce.product.dto.ProductResponse;
 import com.bupt.ecommerce.product.dto.SetStockRequest;
@@ -35,7 +37,7 @@ public class ProductController {
     public ProductController(
             ProductService productService,
             @Value("${app.local-demo.default-admin-id}") Long defaultAdminId,
-            @Value("${app.local-demo.enable-default-user:true}") boolean enableDefaultUser
+            @Value("${app.local-demo.enable-default-user:false}") boolean enableDefaultUser
     ) {
         this.productService = productService;
         this.defaultAdminId = defaultAdminId;
@@ -62,8 +64,10 @@ public class ProductController {
     @Operation(summary = "设置库存", description = "ADMIN 接口，设置指定商品库存")
     public ApiResponse<StockResponse> stock(
             @PathVariable("productId") Long productId,
-            @Valid @RequestBody SetStockRequest request
+            @Valid @RequestBody SetStockRequest request,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
     ) {
+        requireAdmin(role);
         return ApiResponse.success(productService.setStock(productId, request));
     }
 
@@ -71,9 +75,21 @@ public class ProductController {
     @Operation(summary = "创建商品", description = "ADMIN 接口，创建商品基础信息")
     public ApiResponse<ProductResponse> create(
             @Valid @RequestBody CreateProductRequest request,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
+            @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
     ) {
+        requireAdmin(role);
         return ApiResponse.success(productService.create(request, resolveUserId(userId, defaultAdminId)));
+    }
+
+    private void requireAdmin(String role) {
+        if (enableDefaultUser && role == null) {
+            return;
+        }
+        if (Role.ADMIN.name().equals(role)) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.FORBIDDEN);
     }
 
     private Long resolveUserId(Long userId, Long defaultId) {

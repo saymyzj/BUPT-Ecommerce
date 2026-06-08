@@ -1,0 +1,3 @@
+app:
+  local-demo:
+    enable-default-user: true

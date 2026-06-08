@@ -5,10 +5,17 @@ import org.springframework.http.HttpMethod;
 
 public class GatewayAuthPolicy {
 
+    public boolean isGatewayBlockedEndpoint(String path) {
+        return path.startsWith("/api/orders/internal/")
+                || path.matches("^/api/push/[^/]+/internal/.*$");
+    }
+
     public boolean isPublicEndpoint(HttpMethod method, String path) {
         if (path.startsWith("/v3/api-docs")
                 || path.startsWith("/swagger-ui")
                 || path.startsWith("/webjars/")
+                || "/".equals(path)
+                || "/favicon.ico".equals(path)
                 || "/swagger-ui.html".equals(path)
                 || path.startsWith("/openapi/")) {
             return true;

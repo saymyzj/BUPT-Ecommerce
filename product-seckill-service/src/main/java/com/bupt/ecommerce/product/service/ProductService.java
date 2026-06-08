@@ -44,7 +44,14 @@ public class ProductService {
         product.setCreatedAt(now);
         product.setUpdatedAt(now);
         Product saved = productRepository.save(product);
-        return ProductResponse.from(saved, null);
+        ProductStock stock = new ProductStock();
+        stock.setProductId(saved.getId());
+        stock.setTotalStock(0);
+        stock.setAvailableStock(0);
+        stock.setReservedStock(0);
+        stock.setVersion(0L);
+        stock.setUpdatedAt(now);
+        return ProductResponse.from(saved, stockRepository.save(stock));
     }
 
     @Transactional(readOnly = true)

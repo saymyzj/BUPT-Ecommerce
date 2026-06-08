@@ -4,6 +4,8 @@ import com.bupt.ecommerce.common.api.ApiResponse;
 import com.bupt.ecommerce.common.api.ErrorCode;
 import com.bupt.ecommerce.common.api.PageResponse;
 import com.bupt.ecommerce.common.exception.BusinessException;
+import com.bupt.ecommerce.common.security.AuthHeaders;
+import com.bupt.ecommerce.common.security.Role;
 import com.bupt.ecommerce.order.dto.OrderResponse;
 import com.bupt.ecommerce.order.dto.SeckillResultResponse;
 import com.bupt.ecommerce.order.service.OrderService;
@@ -25,15 +27,18 @@ public class OrderController {
     private final OrderService orderService;
     private final Long defaultUserId;
     private final boolean enableDefaultUser;
+    private final String internalToken;
 
     public OrderController(
             OrderService orderService,
             @Value("${app.local-demo.default-user-id}") Long defaultUserId,
-            @Value("${app.local-demo.enable-default-user:true}") boolean enableDefaultUser
+            @Value("${app.local-demo.enable-default-user:false}") boolean enableDefaultUser,
+            @Value("${app.internal.token}") String internalToken
     ) {
         this.orderService = orderService;
         this.defaultUserId = defaultUserId;
         this.enableDefaultUser = enableDefaultUser;
+        this.internalToken = internalToken;
     }
 
     @GetMapping
@@ -41,7 +46,7 @@ public class OrderController {
     public ApiResponse<PageResponse<OrderResponse>> page(
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
+            @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
     ) {
         return ApiResponse.success(orderService.page(resolveUserId(userId), page, pageSize));
     }
@@ -50,7 +55,7 @@ public class OrderController {
     @Operation(summary = "订单详情", description = "CUSTOMER 接口，查询订单详情")
     public ApiResponse<OrderResponse> detail(
             @PathVariable("orderId") Long orderId,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
+            @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
     ) {
         return ApiResponse.success(orderService.detail(orderId, resolveUserId(userId)));
     }
@@ -60,8 +65,10 @@ public class OrderController {
     public ApiResponse<PageResponse<OrderResponse>> adminPage(
             @RequestParam(value = "page", defaultValue = "1") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
-            @RequestParam(value = "status", required = false) String status
+            @RequestParam(value = "status", required = false) String status,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
     ) {
+        requireAdmin(role);
         return ApiResponse.success(orderService.adminPage(page, pageSize, status));
     }
 
@@ -69,8 +76,10 @@ public class OrderController {
     @Operation(summary = "内部查询秒杀订单结果", description = "服务间接口，按活动和用户回查订单结果")
     public ApiResponse<SeckillResultResponse> seckillResult(
             @RequestParam("activityId") Long activityId,
-            @RequestParam("userId") Long userId
+            @RequestParam("userId") Long userId,
+            @RequestHeader(value = AuthHeaders.INTERNAL_TOKEN, required = false) String token
     ) {
+        requireInternalToken(token);
         return ApiResponse.success(orderService.findSeckillResult(activityId, userId));
     }
 
@@ -82,5 +91,22 @@ public class OrderController {
             return defaultUserId;
         }
         throw new BusinessException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private void requireAdmin(String role) {
+        if (enableDefaultUser && role == null) {
+            return;
+        }
+        if (Role.ADMIN.name().equals(role)) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.FORBIDDEN);
+    }
+
+    private void requireInternalToken(String token) {
+        if (internalToken.equals(token)) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.FORBIDDEN);
     }
 }

@@ -2,6 +2,7 @@ package com.bupt.ecommerce.product.service;
 
 import com.bupt.ecommerce.common.api.ErrorCode;
 import com.bupt.ecommerce.common.exception.BusinessException;
+import com.bupt.ecommerce.common.security.AuthHeaders;
 import com.bupt.ecommerce.product.dto.CreateSeckillActivityRequest;
 import com.bupt.ecommerce.product.dto.OrderCreateMessage;
 import com.bupt.ecommerce.product.dto.SeckillActivityResponse;
@@ -80,6 +81,7 @@ public class SeckillService {
     private final OrderMessagePublisher orderMessagePublisher;
     private final ObjectMapper objectMapper;
     private final RestClient orderServiceClient;
+    private final String internalToken;
     private final long userFlagTtlSeconds;
     private final long resultTtlSeconds;
 
@@ -91,6 +93,7 @@ public class SeckillService {
             OrderMessagePublisher orderMessagePublisher,
             ObjectMapper objectMapper,
             @Value("${app.order-service.base-url}") String orderServiceBaseUrl,
+            @Value("${app.internal.token}") String internalToken,
             @Value("${app.seckill.user-flag-ttl-seconds}") long userFlagTtlSeconds,
             @Value("${app.seckill.result-ttl-seconds}") long resultTtlSeconds
     ) {
@@ -101,6 +104,7 @@ public class SeckillService {
         this.orderMessagePublisher = orderMessagePublisher;
         this.objectMapper = objectMapper;
         this.orderServiceClient = RestClient.builder().baseUrl(orderServiceBaseUrl).build();
+        this.internalToken = internalToken;
         this.userFlagTtlSeconds = userFlagTtlSeconds;
         this.resultTtlSeconds = resultTtlSeconds;
     }
@@ -242,6 +246,7 @@ public class SeckillService {
                             .queryParam("activityId", activityId)
                             .queryParam("userId", userId)
                             .build())
+                    .header(AuthHeaders.INTERNAL_TOKEN, internalToken)
                     .retrieve()
                     .body(String.class);
             if (value == null || value.isBlank()) {

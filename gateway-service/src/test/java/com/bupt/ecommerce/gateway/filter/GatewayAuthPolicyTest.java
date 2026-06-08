@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GatewayAuthPolicyTest {
@@ -29,6 +30,18 @@ class GatewayAuthPolicyTest {
         assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.PUT, "/api/products/10001/stock"));
         assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.POST, "/api/seckill/activities"));
         assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.GET, "/api/orders/admin"));
+    }
+
+    @Test
+    void internalOrderRoutesAreBlockedAtGateway() {
+        assertTrue(policy.isGatewayBlockedEndpoint("/api/orders/internal/seckill-result"));
+        assertFalse(policy.isGatewayBlockedEndpoint("/api/orders/1"));
+    }
+
+    @Test
+    void internalPushRoutesAreBlockedAtGateway() {
+        assertTrue(policy.isGatewayBlockedEndpoint("/api/push/orders/internal/events"));
+        assertFalse(policy.isGatewayBlockedEndpoint("/api/push/orders/subscribe"));
     }
 
     @Test

@@ -48,6 +48,10 @@ public class BasicGatewayFilter implements GlobalFilter, Ordered {
         HttpMethod method = request.getMethod();
         log.info("gateway request {} {}", method, request.getURI());
 
+        if (authPolicy.isGatewayBlockedEndpoint(path)) {
+            return writeError(exchange, HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN);
+        }
+
         if (HttpMethod.OPTIONS.equals(method) || authPolicy.isPublicEndpoint(method, path)) {
             return chain.filter(exchange);
         }

@@ -59,6 +59,8 @@ orderId
 2. `GET /api/orders/{orderId}`
 3. `GET /api/orders/admin`
 
+说明：`/api/orders/internal/**` 为服务间接口，Gateway 会拦截客户端访问，不放入 Apifox 客户端演示集合。
+
 ### 4.5 AI 智能导购
 
 1. `POST /api/ai/products/{productId}/consult`

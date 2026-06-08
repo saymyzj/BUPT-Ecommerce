@@ -70,29 +70,21 @@ public class AiConsultService {
         String cacheKey = cacheKey(productId, normalizedQuestion);
         String cached = cachedAnswer(cacheKey);
         if (cached != null) {
-            return ApiResponse.success(Map.of(
-                    "answer", cached,
-                    "status", "SUCCESS",
-                    "cacheHit", true
-            ));
+            return ApiResponse.success(Map.of("answer", cached));
         }
 
         if (llmBaseUrl.isBlank() || llmApiKey.isBlank()) {
-            return fallback(productId, question, true);
+            return fallback();
         }
 
         try {
             String productContext = loadProductContext(productId);
             String answer = requestLlm(productContext, normalizedQuestion);
             cacheAnswer(cacheKey, answer);
-            return ApiResponse.success(Map.of(
-                    "answer", answer,
-                    "status", "SUCCESS",
-                    "cacheHit", false
-            ));
+            return ApiResponse.success(Map.of("answer", answer));
         } catch (RuntimeException ex) {
             log.warn("ai consult fallback productId={} reason={}", productId, ex.getMessage());
-            return fallback(productId, question, false);
+            return fallback();
         }
     }
 
@@ -194,14 +186,9 @@ public class AiConsultService {
         }
     }
 
-    private ApiResponse<Map<String, Object>> fallback(Long productId, String question, boolean missingConfig) {
+    private ApiResponse<Map<String, Object>> fallback() {
         return new ApiResponse<>(ErrorCode.AI_UNAVAILABLE.code(), ErrorCode.AI_UNAVAILABLE.message(), Map.of(
-                "answer", FALLBACK_ANSWER,
-                "status", "FALLBACK",
-                "cacheHit", false,
-                "productId", productId,
-                "question", question,
-                "reason", missingConfig ? "LLM_NOT_CONFIGURED" : "LLM_CALL_FAILED"
+                "answer", FALLBACK_ANSWER
         ));
     }
 }

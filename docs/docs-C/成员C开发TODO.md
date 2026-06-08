@@ -36,10 +36,10 @@
 ## 3. AI 智能导购
 
 - [x] `ai-service` 不再返回 `code=0` 的硬编码占位回答。
-- [x] 未配置 `LLM_BASE_URL` / `LLM_API_KEY` 时返回 `30001` 和 `status=FALLBACK`。
+- [x] 未配置 `LLM_BASE_URL` / `LLM_API_KEY` 时返回 `code=30001` 和降级回答。
 - [x] 配置 LLM 时调用 OpenAI 兼容 `chat/completions` 接口。
 - [x] AI 请求基于商品详情上下文和用户问题构造。
-- [x] 增加本地内存问答缓存，返回 `cacheHit`。
+- [x] 增加本地内存问答缓存；对外响应仍按契约只返回 `answer`。
 - [x] 使用真实 LLM 配置完成一次端到端 AI 咨询截图。
 - [x] 后续如时间允许，将内存缓存替换或扩展为 Redis key：`ai:product:qa:{productId}:{questionHash}`。
 - [x] 补充用户级限流、排队、超时降级的报告截图或说明。

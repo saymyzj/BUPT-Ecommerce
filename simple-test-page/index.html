@@ -344,10 +344,25 @@
 
   <script>
     const $ = (id) => document.getElementById(id);
+
+    function readStoredJson(key, fallback) {
+      const raw = localStorage.getItem(key);
+      if (!raw || raw === "undefined") {
+        localStorage.removeItem(key);
+        return fallback;
+      }
+      try {
+        return JSON.parse(raw);
+      } catch (_) {
+        localStorage.removeItem(key);
+        return fallback;
+      }
+    }
+
     const state = {
       token: localStorage.getItem("token") || "",
       adminToken: localStorage.getItem("adminToken") || "",
-      user: JSON.parse(localStorage.getItem("user") || "null"),
+      user: readStoredJson("user", null),
       pushAbort: null
     };
 

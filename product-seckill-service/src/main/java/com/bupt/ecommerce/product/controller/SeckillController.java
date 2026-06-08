@@ -3,6 +3,8 @@ package com.bupt.ecommerce.product.controller;
 import com.bupt.ecommerce.common.api.ApiResponse;
 import com.bupt.ecommerce.common.api.ErrorCode;
 import com.bupt.ecommerce.common.exception.BusinessException;
+import com.bupt.ecommerce.common.security.AuthHeaders;
+import com.bupt.ecommerce.common.security.Role;
 import com.bupt.ecommerce.product.dto.CreateSeckillActivityRequest;
 import com.bupt.ecommerce.product.dto.SeckillActivityResponse;
 import com.bupt.ecommerce.product.dto.SeckillQueuedResponse;
@@ -33,7 +35,7 @@ public class SeckillController {
     public SeckillController(
             SeckillService seckillService,
             @Value("${app.local-demo.default-user-id}") Long defaultUserId,
-            @Value("${app.local-demo.enable-default-user:true}") boolean enableDefaultUser
+            @Value("${app.local-demo.enable-default-user:false}") boolean enableDefaultUser
     ) {
         this.seckillService = seckillService;
         this.defaultUserId = defaultUserId;
@@ -42,7 +44,11 @@ public class SeckillController {
 
     @PostMapping
     @Operation(summary = "创建秒杀活动", description = "ADMIN 接口，创建秒杀活动")
-    public ApiResponse<SeckillActivityResponse> create(@Valid @RequestBody CreateSeckillActivityRequest request) {
+    public ApiResponse<SeckillActivityResponse> create(
+            @Valid @RequestBody CreateSeckillActivityRequest request,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
+    ) {
+        requireAdmin(role);
         return ApiResponse.success(seckillService.createActivity(request));
     }
 
@@ -57,7 +63,7 @@ public class SeckillController {
     public ApiResponse<SeckillQueuedResponse> seckill(
             @PathVariable("activityId") Long activityId,
             @Valid @RequestBody SeckillRequest request,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
+            @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
     ) {
         return ApiResponse.queued(seckillService.seckill(activityId, resolveUserId(userId), request));
     }
@@ -66,7 +72,7 @@ public class SeckillController {
     @Operation(summary = "查询秒杀结果", description = "CUSTOMER 接口，查询当前用户秒杀结果")
     public ApiResponse<SeckillResultResponse> result(
             @PathVariable("activityId") Long activityId,
-            @RequestHeader(value = "X-User-Id", required = false) Long userId
+            @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
     ) {
         return ApiResponse.success(seckillService.result(activityId, resolveUserId(userId)));
     }
@@ -79,5 +85,15 @@ public class SeckillController {
             return defaultUserId;
         }
         throw new BusinessException(ErrorCode.UNAUTHORIZED);
+    }
+
+    private void requireAdmin(String role) {
+        if (enableDefaultUser && role == null) {
+            return;
+        }
+        if (Role.ADMIN.name().equals(role)) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.FORBIDDEN);
     }
 }

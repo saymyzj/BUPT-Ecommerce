@@ -5,3 +5,6 @@ spring:
   application:
     name: push-service
 
+app:
+  internal:
+    token: ${INTERNAL_SERVICE_TOKEN:bupt-ecommerce-internal-dev-token}

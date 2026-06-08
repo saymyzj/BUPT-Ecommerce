@@ -25,10 +25,10 @@ AI 商品咨询接口属于成员 C 职责。成员 B 只保证商品列表和�
 ```yaml
 app:
   local-demo:
-    enable-default-user: true
+    enable-default-user: false
 ```
 
-本地直连测试可以保持 `true`。通过 Gateway 联调和正式验收时，应改为 `false`，此时缺少 `X-User-Id` 会返回未登录错误，避免绕过 Gateway 的登录和权限链路。
+默认配置必须保持 `false`，此时缺少 `X-User-Id` 会返回未登录错误，避免绕过 Gateway 的登录和权限链路。仅本地演示直连后端服务时，可显式启用 `demo` profile，使 `application-demo.yml` 中的演示兜底生效。
 
 ## 3. 活动库存预占
 

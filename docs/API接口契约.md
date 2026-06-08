@@ -287,6 +287,21 @@ GET /api/orders/admin?page=1&pageSize=10&status=CREATED
 
 权限：`ADMIN`
 
+### 6.4 内部秒杀结果回查
+
+```text
+GET /api/orders/internal/seckill-result?activityId=1&userId=10001
+```
+
+权限：`INTERNAL`
+
+说明：
+
+1. 该接口仅供 `product-seckill-service` 在秒杀结果查询链路中回查 `order-service`。
+2. 调用方必须携带内部服务头 `X-Internal-Token`，token 值通过 `INTERNAL_SERVICE_TOKEN` 配置。
+3. Gateway 入口直接拦截 `/api/orders/internal/**`，客户端和 Apifox 演示流程不直接调用该接口。
+4. 对外查询秒杀结果仍使用 `GET /api/seckill/activities/{activityId}/result`。
+
 ## 7. AI 咨询接口
 
 ### 7.1 商品咨询

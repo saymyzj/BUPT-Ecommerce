@@ -30,7 +30,7 @@
 
 ![秒杀订单核心数据库 ER 图](../images/gpt-database-er.png)
 
-说明：展示商品、库存、秒杀活动、订单、订单明细、MQ 日志和 AI 咨询日志之间的关系。重点约束是 `orders(user_id, activity_id)` 和 `mq_message_logs.message_id`。
+说明：展示商品、库存、秒杀活动、订单、订单明细和 MQ 日志之间的关系。`ai_consult_logs` 在数据库设计中为成员 C 可选扩展表，当前原型暂不持久化 AI 咨询日志。重点约束是 `orders(user_id, activity_id)` 和 `mq_message_logs.message_id`。
 
 ### 2.4 MQ 异步订单消息流图
 

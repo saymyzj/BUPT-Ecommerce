@@ -117,7 +117,7 @@ orderId = $.data.orderId
 }
 ```
 
-如果本地没有配置 `LLM_API_KEY` / `LLM_BASE_URL`，接口返回 `30001` 并携带 `status=FALLBACK`，这是明确降级，不作为真实 LLM 成功回答。
+如果本地没有配置 `LLM_API_KEY` / `LLM_BASE_URL`，接口返回 `code=30001` 和降级回答，这是明确降级，不作为真实 LLM 成功回答。
 
 ### 4.6 06 实时推送
 
@@ -162,4 +162,4 @@ Authorization: Bearer {{token}}
 2. 返回结构必须为 `{ code, message, data }`。
 3. 秒杀接口不得把 `QUEUEING` 冒充为订单成功。
 4. 推送事件必须来自订单服务落库后的内部发布。
-5. AI 降级必须显示 `code=30001` 和 `status=FALLBACK`。
+5. AI 降级必须显示 `code=30001`，响应 `data` 按契约只暴露 `answer`。

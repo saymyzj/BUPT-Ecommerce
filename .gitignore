@@ -5,6 +5,8 @@
 target/
 .m2/
 *.log
+*.pid
+logs/
 .env
 application-local.yml
 docs/docs-C/images/屏幕截图*.png

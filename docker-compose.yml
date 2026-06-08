@@ -7,7 +7,6 @@ services:
       MYSQL_DATABASE: bupt_ecommerce
     ports:
       - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
 
   redis:
     image: redis:7.4

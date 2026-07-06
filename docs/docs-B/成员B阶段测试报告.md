@@ -1,5 +1,7 @@
 # 成员 B 阶段测试报告
 
+> 说明：本文为 2026-05-26 早期成员 B 联调记录，包含直连 `product-seckill-service` 与 `order-service` 的服务内验证口径。项目最终演示、Apifox 集合和压测脚本均以 Gateway `http://localhost:8080` 为客户端统一入口；直连端口仅用于早期排障或内部链路压测。
+
 ## 1. 测试目标
 
 验证成员 B 负责的商品、库存、秒杀、Redis、RabbitMQ、订单落库和结果查询链路。

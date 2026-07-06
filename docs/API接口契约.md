@@ -194,6 +194,19 @@ PUT /api/products/{productId}/stock
 }
 ```
 
+### 4.5 商品下架
+
+```text
+PUT /api/products/{productId}/offline
+```
+
+权限：`ADMIN`
+
+说明：
+
+1. 调用成功后商品 `status` 置为 `OFF_SALE`。
+2. `OFF_SALE` 商品不得再创建新的秒杀活动。
+
 ## 5. 秒杀活动接口
 
 ### 5.1 创建秒杀活动
@@ -215,6 +228,8 @@ POST /api/seckill/activities
   "seckillStock": 50
 }
 ```
+
+约束：只有 `ON_SALE` 商品可以创建秒杀活动，下架商品返回业务冲突。
 
 ### 5.2 秒杀活动详情
 
@@ -311,6 +326,8 @@ POST /api/ai/products/{productId}/consult
 ```
 
 权限：`CUSTOMER`, `ADMIN`
+
+服务内约束：`ai-service` 只信任 Gateway 注入的 `X-User-Id`。直连服务且缺少该请求头时返回 `401`。
 
 请求体：
 

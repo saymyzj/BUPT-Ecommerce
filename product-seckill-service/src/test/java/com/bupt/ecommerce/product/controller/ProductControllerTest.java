@@ -32,4 +32,12 @@ class ProductControllerTest {
 
         assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
     }
+
+    @Test
+    void offlineShouldRejectMissingAdminRoleInsideService() {
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> controller.offline(1L, null));
+
+        assertEquals(ErrorCode.FORBIDDEN.code(), ex.getCode());
+    }
 }

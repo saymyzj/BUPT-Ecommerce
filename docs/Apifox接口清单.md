@@ -45,6 +45,7 @@ orderId
 2. `GET /api/products`
 3. `GET /api/products/{productId}`
 4. `PUT /api/products/{productId}/stock`
+5. `PUT /api/products/{productId}/offline`
 
 ### 4.3 秒杀活动
 

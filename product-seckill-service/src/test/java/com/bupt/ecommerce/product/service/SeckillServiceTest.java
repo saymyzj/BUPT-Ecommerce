@@ -2,7 +2,10 @@ package com.bupt.ecommerce.product.service;
 
 import com.bupt.ecommerce.common.api.ErrorCode;
 import com.bupt.ecommerce.common.exception.BusinessException;
+import com.bupt.ecommerce.product.dto.CreateSeckillActivityRequest;
 import com.bupt.ecommerce.product.dto.SeckillRequest;
+import com.bupt.ecommerce.product.entity.Product;
+import com.bupt.ecommerce.product.entity.ProductStatus;
 import com.bupt.ecommerce.product.entity.SeckillActivity;
 import com.bupt.ecommerce.product.entity.SeckillActivityStatus;
 import com.bupt.ecommerce.product.mq.OrderMessagePublisher;
@@ -33,13 +36,14 @@ import static org.mockito.Mockito.when;
 class SeckillServiceTest {
 
     private SeckillActivityRepository activityRepository;
+    private ProductRepository productRepository;
     private StringRedisTemplate redisTemplate;
     private OrderMessagePublisher orderMessagePublisher;
     private SeckillService seckillService;
 
     @BeforeEach
     void setUp() {
-        ProductRepository productRepository = mock(ProductRepository.class);
+        productRepository = mock(ProductRepository.class);
         ProductStockRepository stockRepository = mock(ProductStockRepository.class);
         activityRepository = mock(SeckillActivityRepository.class);
         redisTemplate = mock(StringRedisTemplate.class);
@@ -101,6 +105,25 @@ class SeckillServiceTest {
                 () -> seckillService.seckill(1L, 10001L, new SeckillRequest(1)));
 
         assertEquals(ErrorCode.STOCK_NOT_ENOUGH.code(), ex.getCode());
+    }
+
+    @Test
+    void createActivityShouldRejectOfflineProduct() {
+        Product product = new Product();
+        product.setId(20001L);
+        product.setStatus(ProductStatus.OFF_SALE);
+        when(productRepository.findById(20001L)).thenReturn(Optional.of(product));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> seckillService.createActivity(new CreateSeckillActivityRequest(
+                        20001L,
+                        LocalDateTime.now().plusMinutes(1),
+                        LocalDateTime.now().plusMinutes(10),
+                        new BigDecimal("99.90"),
+                        10
+                )));
+
+        assertEquals(ErrorCode.CONFLICT.code(), ex.getCode());
     }
 
     private SeckillActivity activity() {

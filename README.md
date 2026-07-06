@@ -90,7 +90,27 @@ cd BUPT-Ecommerce
 
 脚本会先拉起 MySQL、Redis、RabbitMQ，再按推荐顺序启动各个后端服务。
 
-### 2.4 开发分支
+当前 `docker-compose.yml` 只编排 MySQL、Redis、RabbitMQ 三个中间件；本地演示“各微服务和中间件启动状态”时统一使用 `scripts/start-local.ps1` 启动全部服务并查看健康检查输出。
+
+### 2.4 秒杀并发验证脚本
+
+仓库提供可执行的 100 件库存、10000 并发验证脚本：
+
+```bash
+node scripts/seckill-load-test.js
+```
+
+脚本默认 `MODE=gateway`，通过 `http://localhost:8080` 登录管理员和压测用户，携带 JWT 创建商品、设置 100 件库存、创建秒杀活动并发起 10000 个不同用户的秒杀请求，最后输出 `ordersInMySQL`、`redisStock`、`duplicateOrders` 等答辩证据。运行前请先通过 `scripts/start-local.ps1` 启动 MySQL、Redis、RabbitMQ 以及全部后端服务。
+
+如只想快速压测 Redis + MQ 核心链路，可显式使用内部直连模式：
+
+```bash
+MODE=internal BASE_URL=http://localhost:8082 node scripts/seckill-load-test.js
+```
+
+内部模式会直接向 `product-seckill-service` 注入 `X-User-Id` / `X-User-Role`，仅用于服务内压测，不作为客户端请求路径。
+
+### 2.5 开发分支
 
 三名成员固定分支：
 
@@ -123,7 +143,7 @@ git push -u origin feature/member-c-ai-push-demo
 | B | `feature/member-b-seckill-order` | 商品、秒杀、Redis、MQ、订单、AI 咨询 |
 | C | `feature/member-c-ai-push-demo` | 推送、测试页面、Apifox、演示体验 |
 
-### 2.5 日常开发流程
+### 2.6 日常开发流程
 
 每天开始开发前：
 

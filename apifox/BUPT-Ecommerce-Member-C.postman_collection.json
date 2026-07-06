@@ -196,6 +196,20 @@
             "url": "{{baseUrl}}/api/products/{{productId}}/stock",
             "description": "ADMIN."
           }
+        },
+        {
+          "name": "商品下架",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/products/{{productId}}/offline",
+            "description": "ADMIN. Sets product status to OFF_SALE. Run this as a standalone admin check; do not run it before creating the seckill activity in the full demo flow."
+          }
         }
       ]
     },

@@ -89,6 +89,16 @@ public class ProductService {
     }
 
     @Transactional
+    public ProductResponse offline(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        product.setStatus(ProductStatus.OFF_SALE);
+        product.setUpdatedAt(LocalDateTime.now());
+        ProductStock stock = stockRepository.findByProductId(productId).orElse(null);
+        return ProductResponse.from(productRepository.save(product), stock);
+    }
+
+    @Transactional
     public StockResponse setStock(Long productId, SetStockRequest request) {
         productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));

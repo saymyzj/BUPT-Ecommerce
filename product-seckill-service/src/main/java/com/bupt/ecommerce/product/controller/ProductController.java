@@ -71,6 +71,16 @@ public class ProductController {
         return ApiResponse.success(productService.setStock(productId, request));
     }
 
+    @PutMapping("/{productId}/offline")
+    @Operation(summary = "商品下架", description = "ADMIN 接口，将商品状态置为 OFF_SALE")
+    public ApiResponse<ProductResponse> offline(
+            @PathVariable("productId") Long productId,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
+    ) {
+        requireAdmin(role);
+        return ApiResponse.success(productService.offline(productId));
+    }
+
     @PostMapping
     @Operation(summary = "创建商品", description = "ADMIN 接口，创建商品基础信息")
     public ApiResponse<ProductResponse> create(

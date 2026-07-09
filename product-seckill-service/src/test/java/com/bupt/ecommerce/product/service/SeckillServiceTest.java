@@ -31,6 +31,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class SeckillServiceTest {
@@ -40,6 +41,7 @@ class SeckillServiceTest {
     private StringRedisTemplate redisTemplate;
     private SeckillAdmissionService admissionService;
     private ReliableOrderPublisher reliableOrderPublisher;
+    private WaitlistService waitlistService;
     private SeckillService seckillService;
 
     @BeforeEach
@@ -50,6 +52,7 @@ class SeckillServiceTest {
         redisTemplate = mock(StringRedisTemplate.class);
         admissionService = mock(SeckillAdmissionService.class);
         reliableOrderPublisher = mock(ReliableOrderPublisher.class);
+        waitlistService = mock(WaitlistService.class);
         seckillService = new SeckillService(
                 productRepository,
                 stockRepository,
@@ -58,6 +61,7 @@ class SeckillServiceTest {
                 redisTemplate,
                 admissionService,
                 reliableOrderPublisher,
+                waitlistService,
                 new ObjectMapper(),
                 "http://localhost:8083",
                 "internal-token",
@@ -109,6 +113,19 @@ class SeckillServiceTest {
                 () -> seckillService.seckill(1L, 10001L, new SeckillRequest(1)));
 
         assertEquals(ErrorCode.STOCK_NOT_ENOUGH.code(), ex.getCode());
+    }
+
+    @Test
+    void stockExhaustedShouldEnterWaitlistOnlyWhenFeatureIsEnabled() {
+        when(waitlistService.isEnabled()).thenReturn(true);
+        when(redisTemplate.execute(any(DefaultRedisScript.class), anyList(), any(), any(), any(), any()))
+                .thenReturn(1L);
+
+        var response = seckillService.seckill(1L, 10001L, new SeckillRequest(1));
+
+        assertEquals("QUEUEING", response.status());
+        verify(waitlistService).enqueue(1L, 10001L, 1);
+        verifyNoInteractions(admissionService, reliableOrderPublisher);
     }
 
     @Test

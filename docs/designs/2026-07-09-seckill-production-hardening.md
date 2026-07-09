@@ -138,25 +138,25 @@
   Scope: Compose、product-seckill-service、order-service、docs
   Validation: 默认 Compose 不变；Sentinel 主节点切换后恢复；库存可重建
 
-- [-] 完成第二批兼容回归、提交并推送
+- [x] 完成第二批兼容回归、提交并推送
   Scope: 全模块、Git
   Validation: 测试通过，成员 A/C 正常链路回归，远程分支包含提交
 
 ### Batch 3
 
-- [ ] 增加多实例任务租约
+- [x] 增加多实例任务租约
   Scope: order-service、product-seckill-service、schema
   Validation: 两个任务执行者只处理一次同一记录
 
-- [ ] 增加默认关闭的有限公平候补
+- [x] 增加默认关闭的有限公平候补
   Scope: product-seckill-service、Redis、配置、结果查询/SSE 兼容
   Validation: 默认模式旧行为不变；公平模式按服务器顺序递补
 
-- [ ] 增加故障注入与一致性验证脚本
+- [x] 增加故障注入与一致性验证脚本
   Scope: scripts、docs
   Validation: Redis/MQ/MySQL/网络不确定场景及库存不变量通过
 
-- [ ] 完成第三批兼容回归、提交并推送
+- [-] 完成第三批兼容回归、提交并推送
   Scope: 全模块、Git
   Validation: 测试通过，远程分支包含提交
 
@@ -177,3 +177,5 @@
 - 2026-07-09：第一批全仓库测试通过，共覆盖 Gateway、用户、秒杀、订单、AI 和推送模块；使用 Java 21 运行 Maven 以兼容当前 Mockito/Byte Buddy。
 - 2026-07-09：第一批提交 `ad38088` 已推送至 `origin/feature/member-b-seckill-order`。
 - 2026-07-09：第二批新增接口均为管理员或内部接口；旧 API、MQ 拓扑、SSE 事件和默认 Compose 未改变。核心模块测试及 HA Compose 配置校验通过。
+- 2026-07-09：第二批提交 `e17dd58` 已推送至 `origin/feature/member-b-seckill-order`。
+- 2026-07-09：第三批全仓库测试通过；候补默认关闭，压测脚本增加订单、资格、Redis 库存和可靠投递不变量校验。

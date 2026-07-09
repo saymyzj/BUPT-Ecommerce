@@ -31,9 +31,14 @@ public class DeadLetterConsumer {
             @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag
     ) throws Exception {
         String payload = new String(rabbitMessage.getBody(), StandardCharsets.UTF_8);
-        deadLetterService.record(rabbitMessage, payload);
-        channel.basicAck(deliveryTag, false);
-        log.warn("captured seckill order dead letter messageId={}",
-                rabbitMessage.getMessageProperties().getMessageId());
+        try {
+            deadLetterService.record(rabbitMessage, payload);
+            channel.basicAck(deliveryTag, false);
+            log.warn("captured seckill order dead letter messageId={}",
+                    rabbitMessage.getMessageProperties().getMessageId());
+        } catch (RuntimeException ex) {
+            channel.basicNack(deliveryTag, false, true);
+            log.error("failed to persist dead letter, message requeued", ex);
+        }
     }
 }

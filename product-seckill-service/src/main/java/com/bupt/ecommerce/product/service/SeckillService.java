@@ -85,6 +85,7 @@ public class SeckillService {
     private final StringRedisTemplate redisTemplate;
     private final SeckillAdmissionService admissionService;
     private final ReliableOrderPublisher reliableOrderPublisher;
+    private final WaitlistService waitlistService;
     private final ObjectMapper objectMapper;
     private final RestClient orderServiceClient;
     private final String internalToken;
@@ -99,6 +100,7 @@ public class SeckillService {
             StringRedisTemplate redisTemplate,
             SeckillAdmissionService admissionService,
             ReliableOrderPublisher reliableOrderPublisher,
+            WaitlistService waitlistService,
             ObjectMapper objectMapper,
             @Value("${app.order-service.base-url}") String orderServiceBaseUrl,
             @Value("${app.internal.token}") String internalToken,
@@ -112,6 +114,7 @@ public class SeckillService {
         this.redisTemplate = redisTemplate;
         this.admissionService = admissionService;
         this.reliableOrderPublisher = reliableOrderPublisher;
+        this.waitlistService = waitlistService;
         this.objectMapper = objectMapper;
         this.orderServiceClient = RestClient.builder().baseUrl(orderServiceBaseUrl).build();
         this.internalToken = internalToken;
@@ -166,6 +169,9 @@ public class SeckillService {
         SeckillActivity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         preheatIfAbsent(activity);
+        if (waitlistService.isWaiting(activityId, userId)) {
+            return new SeckillQueuedResponse(activityId, "QUEUEING");
+        }
 
         String requestId = UUID.randomUUID().toString();
         String messageId = UUID.randomUUID().toString();
@@ -184,6 +190,10 @@ public class SeckillService {
                 String.valueOf(resultTtlSeconds),
                 queueingResult
         );
+        if (result != null && result == 1L && waitlistService.isEnabled()) {
+            waitlistService.enqueue(activityId, userId, request.quantity());
+            return new SeckillQueuedResponse(activityId, "QUEUEING");
+        }
         mapLuaFailure(result);
 
         OrderCreateMessage message = new OrderCreateMessage(

@@ -47,6 +47,10 @@ app:
   seckill-publisher:
     fixed-delay-ms: 5000
     max-attempts: 12
+  seckill-waitlist:
+    enabled: ${SECKILL_WAITLIST_ENABLED:false}
+    max-size-per-activity: ${SECKILL_WAITLIST_MAX_SIZE:200}
+    promotion-delay-ms: 2000
 
 management:
   endpoints:

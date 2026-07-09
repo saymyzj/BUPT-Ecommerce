@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -18,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
 
 class DeadLetterServiceTest {
 
@@ -50,13 +52,24 @@ class DeadLetterServiceTest {
         record.setReplayCount(0);
         when(repository.findById(1L)).thenReturn(Optional.of(record));
         when(repository.save(any(DeadLetterRecord.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            CorrelationData correlationData = invocation.getArgument(3);
+            correlationData.getFuture().complete(new CorrelationData.Confirm(true, null));
+            return null;
+        }).when(rabbitTemplate).send(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                any(Message.class),
+                any(CorrelationData.class)
+        );
 
         service.replay(1L);
 
         verify(rabbitTemplate).send(
                 org.mockito.ArgumentMatchers.eq("seckill.order.exchange"),
                 org.mockito.ArgumentMatchers.eq("seckill.order.create"),
-                any(Message.class)
+                any(Message.class),
+                any(CorrelationData.class)
         );
         assertEquals(DeadLetterStatus.REPLAYED, record.getStatus());
         assertEquals(1, record.getReplayCount());

@@ -1,6 +1,10 @@
 package com.bupt.ecommerce.product.service;
 
 import com.bupt.ecommerce.product.dto.OrderCreateMessage;
+import com.bupt.ecommerce.product.dto.PublishEventResponse;
+import com.bupt.ecommerce.common.api.PageResponse;
+import com.bupt.ecommerce.common.api.ErrorCode;
+import com.bupt.ecommerce.common.exception.BusinessException;
 import com.bupt.ecommerce.product.entity.PublishEventStatus;
 import com.bupt.ecommerce.product.entity.SeckillPublishEvent;
 import com.bupt.ecommerce.product.entity.SeckillReservationStatus;
@@ -13,8 +17,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.List;
 
 @Service
@@ -26,6 +33,7 @@ public class ReliableOrderPublisher {
     private final SeckillReservationRepository reservationRepository;
     private final OrderMessagePublisher publisher;
     private final ObjectMapper objectMapper;
+    private final TaskLeaseService taskLeaseService;
     private final int maxAttempts;
 
     public ReliableOrderPublisher(
@@ -33,12 +41,14 @@ public class ReliableOrderPublisher {
             SeckillReservationRepository reservationRepository,
             OrderMessagePublisher publisher,
             ObjectMapper objectMapper,
+            TaskLeaseService taskLeaseService,
             @Value("${app.seckill-publisher.max-attempts:12}") int maxAttempts
     ) {
         this.eventRepository = eventRepository;
         this.reservationRepository = reservationRepository;
         this.publisher = publisher;
         this.objectMapper = objectMapper;
+        this.taskLeaseService = taskLeaseService;
         this.maxAttempts = maxAttempts;
     }
 
@@ -52,8 +62,56 @@ public class ReliableOrderPublisher {
         }
     }
 
+    public PageResponse<PublishEventResponse> page(int page, int pageSize) {
+        Page<SeckillPublishEvent> result = eventRepository.findAll(
+                PageRequest.of(Math.max(page, 1) - 1, Math.max(pageSize, 1))
+        );
+        return new PageResponse<>(
+                result.getContent().stream().map(PublishEventResponse::from).toList(),
+                page,
+                pageSize,
+                result.getTotalElements()
+        );
+    }
+
+    public PublishEventResponse retryEvent(Long id) {
+        SeckillPublishEvent event = eventRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        reservationRepository.findByMessageId(event.getMessageId()).ifPresent(reservation -> {
+            if (reservation.getStatus() == SeckillReservationStatus.DEAD) {
+                reservation.setStatus(SeckillReservationStatus.RETRYING);
+                reservation.setFailureCode(null);
+                reservation.setFailureReason(null);
+                reservation.setUpdatedAt(LocalDateTime.now());
+                reservationRepository.save(reservation);
+            }
+        });
+        try {
+            OrderCreateMessage message = objectMapper.readValue(event.getPayload(), OrderCreateMessage.class);
+            event.setStatus(PublishEventStatus.UNKNOWN);
+            event.setNextRetryAt(LocalDateTime.now());
+            publishNow(event, message);
+            return PublishEventResponse.from(event);
+        } catch (Exception ex) {
+            markUnknown(event, ex);
+            return PublishEventResponse.from(event);
+        }
+    }
+
     @Scheduled(fixedDelayString = "${app.seckill-publisher.fixed-delay-ms:5000}")
     public void retryPendingEvents() {
+        String taskName = "seckill-publish-retry";
+        if (!taskLeaseService.tryAcquire(taskName, Duration.ofMinutes(2))) {
+            return;
+        }
+        try {
+            retryUnderLease();
+        } finally {
+            taskLeaseService.release(taskName);
+        }
+    }
+
+    private void retryUnderLease() {
         LocalDateTime now = LocalDateTime.now();
         for (SeckillPublishEvent event : eventRepository
                 .findTop20ByStatusInAndNextRetryAtLessThanEqualOrderByUpdatedAtAsc(

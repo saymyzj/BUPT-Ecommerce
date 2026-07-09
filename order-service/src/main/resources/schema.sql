@@ -77,3 +77,10 @@ CREATE TABLE IF NOT EXISTS dead_letter_records (
   KEY idx_dead_letter_records_status (status),
   KEY idx_dead_letter_records_updated_at (updated_at)
 );
+
+CREATE TABLE IF NOT EXISTS scheduled_task_locks (
+  task_name VARCHAR(128) PRIMARY KEY,
+  locked_by VARCHAR(64) NOT NULL,
+  locked_until DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+);

@@ -33,6 +33,7 @@ class GatewayAuthPolicyTest {
         assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.POST, "/api/seckill/activities/1/reconcile"));
         assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.GET, "/api/orders/admin"));
         assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.POST, "/api/orders/admin/dead-letters/1/replay"));
+        assertEquals(Role.ADMIN, policy.requiredRole(HttpMethod.POST, "/api/seckill/admin/publish-events/1/retry"));
     }
 
     @Test

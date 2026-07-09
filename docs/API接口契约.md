@@ -247,6 +247,8 @@ POST /api/seckill/activities/{activityId}/orders
 
 权限：`CUSTOMER`
 
+兼容说明：默认演示配置关闭候补功能，库存耗尽时仍返回原库存不足错误。仅当 `SECKILL_WAITLIST_ENABLED=true` 时，有限候补用户沿用原 `queued/QUEUEING` 响应结构进入服务器顺序候补。
+
 请求体：
 
 ```json
@@ -285,6 +287,17 @@ POST /api/seckill/activities/{activityId}/reconcile
 权限：`ADMIN`
 
 说明：根据 MySQL 已创建订单和有效资格记录重建 Redis 库存与用户参与标记。该接口只用于 Redis 恢复和验收演示，不改变原秒杀接口。
+
+### 5.6 管理员查询与重试可靠投递
+
+```text
+GET /api/seckill/admin/publish-events?page=1&pageSize=20
+POST /api/seckill/admin/publish-events/{id}/retry
+```
+
+权限：`ADMIN`
+
+说明：MQ Confirm 结果不确定时保留资格并使用原 `messageId` 重试，禁止直接返库存；达到自动重试上限后可通过该接口人工恢复。
 
 ## 6. 订单接口
 

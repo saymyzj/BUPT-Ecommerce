@@ -14,6 +14,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageBuilder;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class DeadLetterService {
@@ -77,14 +80,20 @@ public class DeadLetterService {
                 .setMessageId(record.getMessageId())
                 .build();
         try {
+            CorrelationData correlationData = new CorrelationData(UUID.randomUUID().toString());
             rabbitTemplate.send(
                     RabbitMqConfig.ORDER_EXCHANGE,
                     RabbitMqConfig.ORDER_CREATE_ROUTING_KEY,
-                    message
+                    message,
+                    correlationData
             );
+            CorrelationData.Confirm confirm = correlationData.getFuture().get(3, TimeUnit.SECONDS);
+            if (!confirm.isAck() || correlationData.getReturned() != null) {
+                throw new IllegalStateException("dead-letter replay was not confirmed");
+            }
             markReplayed(record.getId());
             return DeadLetterResponse.from(repository.findById(id).orElse(record));
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
             markReplayFailed(record.getId(), ex);
             throw new BusinessException(ErrorCode.MQ_PUBLISH_FAILED);
         }
@@ -112,7 +121,7 @@ public class DeadLetterService {
     }
 
     @Transactional
-    public void markReplayFailed(Long id, RuntimeException failure) {
+    public void markReplayFailed(Long id, Exception failure) {
         repository.findById(id).ifPresent(record -> {
             record.setLastError(limit(failure.getMessage()));
             record.setUpdatedAt(LocalDateTime.now());

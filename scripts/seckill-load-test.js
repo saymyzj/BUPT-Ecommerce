@@ -244,10 +244,20 @@ function printCodeCounts(codeCounts) {
     .join(", ");
 }
 
-function assertVerification({ orderCount, duplicateOrderCount, redisStock }) {
+function assertVerification({
+  orderCount,
+  duplicateOrderCount,
+  redisStock,
+  activeReservations,
+  createdReservations,
+  pendingPublishEvents,
+}) {
   const parsedOrderCount = Number(orderCount);
   const parsedDuplicateOrderCount = Number(duplicateOrderCount);
   const parsedRedisStock = Number(redisStock);
+  const parsedActiveReservations = Number(activeReservations);
+  const parsedCreatedReservations = Number(createdReservations);
+  const parsedPendingPublishEvents = Number(pendingPublishEvents);
   const failures = [];
 
   if (!Number.isFinite(parsedOrderCount) || parsedOrderCount > config.stock) {
@@ -258,6 +268,19 @@ function assertVerification({ orderCount, duplicateOrderCount, redisStock }) {
   }
   if (!Number.isFinite(parsedRedisStock) || parsedRedisStock !== 0) {
     failures.push(`redisStock expected 0, got ${redisStock}`);
+  }
+  if (!Number.isFinite(parsedActiveReservations)) {
+    failures.push(`activeReservations is not numeric: ${activeReservations}`);
+  } else if (parsedOrderCount + parsedActiveReservations + parsedRedisStock !== config.stock) {
+    failures.push(
+      `inventory invariant expected ${config.stock}, got orders=${orderCount} + active=${activeReservations} + redis=${redisStock}`
+    );
+  }
+  if (!Number.isFinite(parsedCreatedReservations) || parsedCreatedReservations !== parsedOrderCount) {
+    failures.push(`createdReservations expected ${orderCount}, got ${createdReservations}`);
+  }
+  if (!Number.isFinite(parsedPendingPublishEvents) || parsedPendingPublishEvents !== 0) {
+    failures.push(`pendingPublishEvents expected 0, got ${pendingPublishEvents}`);
   }
 
   if (failures.length > 0) {
@@ -303,13 +326,42 @@ async function main() {
     ) t;
   `.replace(/\s+/g, " "));
   const redisStock = redisScalar(`seckill:stock:${activityId}`);
+  const activeReservations = mysqlScalar(`
+    SELECT COUNT(*)
+    FROM seckill_reservations
+    WHERE activity_id = ${activityId}
+      AND status IN ('RESERVED', 'ORDERING', 'RETRYING', 'RELEASE_PENDING', 'DEAD');
+  `.replace(/\s+/g, " "));
+  const createdReservations = mysqlScalar(`
+    SELECT COUNT(*)
+    FROM seckill_reservations
+    WHERE activity_id = ${activityId}
+      AND status = 'CREATED';
+  `.replace(/\s+/g, " "));
+  const pendingPublishEvents = mysqlScalar(`
+    SELECT COUNT(*)
+    FROM seckill_publish_events e
+    JOIN seckill_reservations r ON r.message_id = e.message_id
+    WHERE r.activity_id = ${activityId}
+      AND e.status IN ('PENDING', 'UNKNOWN', 'DEAD');
+  `.replace(/\s+/g, " "));
 
   console.log("verification:");
   console.log(`ordersInMySQL=${orderCount}`);
   console.log(`redisStock=${redisStock}`);
   console.log(`duplicateOrders=${duplicateOrderCount}`);
+  console.log(`activeReservations=${activeReservations}`);
+  console.log(`createdReservations=${createdReservations}`);
+  console.log(`pendingPublishEvents=${pendingPublishEvents}`);
   console.log(`expectedOrders<=${config.stock}`);
-  assertVerification({ orderCount, duplicateOrderCount, redisStock });
+  assertVerification({
+    orderCount,
+    duplicateOrderCount,
+    redisStock,
+    activeReservations,
+    createdReservations,
+    pendingPublishEvents,
+  });
 }
 
 main().catch(error => {

@@ -70,3 +70,22 @@ CREATE TABLE IF NOT EXISTS seckill_publish_events (
   UNIQUE KEY uk_seckill_publish_events_message_id (message_id),
   KEY idx_seckill_publish_events_status_retry (status, next_retry_at)
 );
+
+CREATE TABLE IF NOT EXISTS scheduled_task_locks (
+  task_name VARCHAR(128) PRIMARY KEY,
+  locked_by VARCHAR(64) NOT NULL,
+  locked_until DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS seckill_waitlist_entries (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  activity_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  quantity INT NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  UNIQUE KEY uk_seckill_waitlist_user_activity (user_id, activity_id),
+  KEY idx_seckill_waitlist_activity_status_id (activity_id, status, id)
+);

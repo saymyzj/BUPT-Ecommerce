@@ -31,6 +31,7 @@ class ReliableOrderPublisherTest {
                 reservationRepository,
                 publisher,
                 new ObjectMapper().findAndRegisterModules(),
+                mock(TaskLeaseService.class),
                 12
         );
         SeckillPublishEvent event = event();
@@ -53,6 +54,7 @@ class ReliableOrderPublisherTest {
                 mock(SeckillReservationRepository.class),
                 mock(OrderMessagePublisher.class),
                 new ObjectMapper().findAndRegisterModules(),
+                mock(TaskLeaseService.class),
                 12
         );
         SeckillPublishEvent event = event();

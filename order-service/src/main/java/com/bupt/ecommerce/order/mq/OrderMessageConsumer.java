@@ -49,7 +49,8 @@ public class OrderMessageConsumer {
             message = objectMapper.readValue(payload, OrderCreateMessage.class);
         } catch (Exception ex) {
             log.error("failed to parse seckill order message payload={}", payload, ex);
-            throw ex;
+            channel.basicNack(deliveryTag, false, false);
+            return;
         }
 
         try {
@@ -63,9 +64,13 @@ public class OrderMessageConsumer {
             channel.basicAck(deliveryTag, false);
             log.warn("ignored terminal seckill reservation messageId={}", message.messageId());
         } catch (Exception ex) {
-            orderService.markMessageFailed(message, payload, ex);
+            try {
+                orderService.markMessageFailed(message, payload, ex);
+            } catch (Exception recordEx) {
+                log.error("failed to persist consumer failure messageId={}", message.messageId(), recordEx);
+            }
             log.error("failed to consume seckill order message={}", message.messageId(), ex);
-            throw ex;
+            channel.basicNack(deliveryTag, false, false);
         }
     }
 }

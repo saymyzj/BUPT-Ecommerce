@@ -48,9 +48,8 @@ public class ProductFaqService {
                     : product.name() + "当前可用库存为 " + product.availableStock()
                     + " 件。" + (product.availableStock() > 0 ? "目前仍可购买。" : "目前已无可用库存。");
             case AVAILABILITY -> "当前商品状态为 " + product.status()
-                    + "。" + ("ACTIVE".equalsIgnoreCase(product.status()) ? "商品处于可售状态。" : "当前不建议继续下单。");
-            case SUITABILITY -> "从现有商品信息看：" + product.description()
-                    + "。是否适合你还取决于具体用途和预算；现有资料不足以确认未写明的适用人群。";
+                    + "。" + (isOnSale(product.status()) ? "商品处于可售状态。" : "当前不建议继续下单。");
+            case SUITABILITY -> suitabilityAnswer(product);
             case SECKILL -> "商品详情接口不能确认当前秒杀价格、时间或资格。请查看对应秒杀活动详情，以下单时活动状态和价格为准。";
             case DELIVERY -> "现有商品资料未提供配送范围、运费和到货时间，暂时无法确定，请以下单页或商家说明为准。";
             case AFTER_SALES -> "现有商品资料未提供退换货和保修政策，暂时无法确定，请查看订单规则或联系平台客服。";
@@ -65,8 +64,26 @@ public class ProductFaqService {
                 .replaceAll("[\\p{P}\\p{S}\\s]+", "");
     }
 
+    private boolean isOnSale(String status) {
+        return "ACTIVE".equalsIgnoreCase(status) || "ON_SALE".equalsIgnoreCase(status);
+    }
+
+    private String suitabilityAnswer(ProductContext product) {
+        String price = product.price() == null ? "价格未提供" : product.price().stripTrailingZeros().toPlainString() + " 元";
+        String stock = product.availableStock() == null ? "库存未提供" : product.availableStock() + " 件可用库存";
+        String statusAdvice = isOnSale(product.status()) ? "当前状态可售" : "当前状态不是可售状态，建议先不要下单";
+        return "结论：如果你的需求是学习、通勤或宿舍日常使用，" + product.name() + "比较适合优先考虑。"
+                + "\n依据1：商品描述写明“" + product.description() + "”，与学生常见的在线学习、通勤和宿舍场景匹配。"
+                + "\n依据2：当前标价为 " + price + "；若页面显示秒杀活动价，应以秒杀活动详情和下单页价格为准。"
+                + "\n依据3：商品状态为 " + product.status() + "，" + statusAdvice + "；商品详情显示" + stock + "。"
+                + "\n建议：预算能接受且需要降噪、长续航或低延迟体验时可以购买；如果你更看重保修、配送速度或真伪资质，现有商品资料没有提供这些信息，需要下单前再确认。";
+    }
+
     private static Map<QuestionCategory, List<String>> keywordMap() {
         Map<QuestionCategory, List<String>> keywords = new LinkedHashMap<>();
+        keywords.put(QuestionCategory.SUITABILITY, List.of(
+                "适合", "学生党", "推荐", "值不值得", "能用吗", "好用吗", "购买建议", "建议买吗"
+        ));
         keywords.put(QuestionCategory.PRICE, List.of(
                 "多少钱", "价格", "价钱", "售价", "贵不贵", "费用", "便宜", "学生价"
         ));
@@ -87,9 +104,6 @@ public class ProductFaqService {
         ));
         keywords.put(QuestionCategory.AUTHENTICITY, List.of(
                 "正品", "真假", "安全", "认证", "质量保证", "靠谱吗"
-        ));
-        keywords.put(QuestionCategory.SUITABILITY, List.of(
-                "适合", "学生党", "推荐", "值不值得", "能用吗", "好用吗"
         ));
         return Collections.unmodifiableMap(keywords);
     }

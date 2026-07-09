@@ -43,6 +43,7 @@
 
     button,
     input,
+    select,
     textarea {
       font: inherit;
     }
@@ -100,6 +101,7 @@
     }
 
     input,
+    select,
     textarea {
       width: 100%;
       border: 1px solid var(--line);
@@ -111,6 +113,7 @@
     }
 
     input:focus,
+    select:focus,
     textarea:focus {
       border-color: var(--primary);
       box-shadow: 0 0 0 3px rgba(18, 110, 130, .12);
@@ -457,6 +460,90 @@
       text-decoration: underline;
     }
 
+    .demo-brief {
+      padding: 12px 14px 0;
+    }
+
+    .route-card {
+      display: grid;
+      grid-template-columns: auto repeat(5, minmax(120px, 1fr));
+      gap: 8px;
+      align-items: stretch;
+      max-width: 1800px;
+      margin: 0 auto;
+    }
+
+    .route-title,
+    .route-step,
+    .hint-card,
+    .command-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 9px 10px;
+    }
+
+    .route-title {
+      display: grid;
+      align-content: center;
+      min-width: 118px;
+      background: #e8f4f6;
+      color: var(--primary);
+      font-weight: 900;
+    }
+
+    .route-step {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .route-step strong {
+      font-size: 13px;
+    }
+
+    .route-step span,
+    .hint-card,
+    .command-card {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .hint-card strong,
+    .command-card strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .command-card code {
+      display: block;
+      margin-top: 4px;
+      border-radius: 6px;
+      padding: 7px 8px;
+      background: #eef3f8;
+      color: var(--text);
+      overflow-wrap: anywhere;
+    }
+
+    .action-notes {
+      display: grid;
+      gap: 7px;
+    }
+
+    .action-note {
+      border-left: 3px solid var(--primary);
+      padding: 6px 8px;
+      background: #f4fbfc;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .action-note strong {
+      color: var(--text);
+    }
+
     .toast {
       position: fixed;
       right: 16px;
@@ -477,6 +564,14 @@
     }
 
     @media (max-width: 1240px) {
+      .route-card {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .route-title {
+        min-width: 0;
+      }
+
       .layout {
         grid-template-columns: minmax(330px, 430px) minmax(440px, 1fr);
       }
@@ -496,7 +591,8 @@
       }
 
       .topbar,
-      .layout {
+      .layout,
+      .route-card {
         grid-template-columns: 1fr;
       }
 
@@ -539,6 +635,17 @@
     </div>
   </header>
 
+  <section class="demo-brief">
+    <div class="route-card">
+      <div class="route-title">现场路线</div>
+      <div class="route-step"><strong>0. 初始化</strong><span>运行脚本生成干净商品数据</span></div>
+      <div class="route-step"><strong>1. 登录</strong><span>管理员 + 普通用户，证明 JWT 权限</span></div>
+      <div class="route-step"><strong>2. 商品活动</strong><span>拉取商品，创建/选择秒杀活动</span></div>
+      <div class="route-step"><strong>3. 秒杀订单</strong><span>Redis 扣减、MQ 下单、SSE 推送</span></div>
+      <div class="route-step"><strong>4. AI 与 B+</strong><span>商品依据回答，可选展示异常恢复</span></div>
+    </div>
+  </section>
+
   <main class="layout">
     <div class="column">
       <section class="panel">
@@ -550,6 +657,10 @@
           <span class="pill" id="authStepState">等待</span>
         </div>
         <div class="panel-body">
+          <div class="hint-card">
+            <strong>演示说法</strong>
+            管理员负责商品和秒杀活动配置，普通用户负责抢购和查询订单；所有业务请求都从 Gateway 进入，并由 JWT 区分角色。
+          </div>
           <div class="field-grid">
             <div>
               <label for="adminUsername">管理员账号</label>
@@ -594,6 +705,11 @@
           <span class="pill" id="productStepState">等待</span>
         </div>
         <div class="panel-body">
+          <div class="command-card">
+            <strong>推荐先初始化演示商品</strong>
+            在终端运行后，回到页面点“拉取商品列表”即可选择商品。
+            <code>node scripts\init-demo-products.js</code>
+          </div>
           <div class="field-grid">
             <div>
               <label for="productName">商品名称</label>
@@ -624,6 +740,12 @@
             <label for="description">商品描述</label>
             <textarea id="description">低延迟蓝牙降噪耳机，续航 36 小时，适合学生通勤、在线学习和宿舍使用。</textarea>
           </div>
+          <div>
+            <label for="productSelect">从商品列表选择</label>
+            <select id="productSelect">
+              <option value="">先拉取商品列表</option>
+            </select>
+          </div>
           <div class="field-grid">
             <div>
               <label for="productId">productId</label>
@@ -637,7 +759,13 @@
           <div class="actions">
             <button id="createProductBtn">创建商品</button>
             <button id="setStockBtn">设置库存</button>
+            <button id="offlineProductBtn" class="danger">下架商品</button>
+            <button id="refreshProductsBtn" class="secondary">拉取商品列表</button>
             <button id="createActivityBtn">创建秒杀活动</button>
+          </div>
+          <div class="result-box" id="productBox">
+            <strong>商品列表</strong>
+            <p>点击“拉取商品列表”后，可选择不同商品用于库存、秒杀活动和 AI 咨询。</p>
           </div>
         </div>
       </section>
@@ -654,6 +782,7 @@
           <div class="actions">
             <button id="runDemoBtn">执行主链路</button>
             <button id="checkGatewayBtn" class="secondary">检测 Gateway</button>
+            <button id="copyInitCommandBtn" class="secondary">复制初始化命令</button>
             <button id="resetDemoBtn" class="ghost">重置页面状态</button>
           </div>
         </div>
@@ -670,12 +799,22 @@
           <span class="pill" id="orderStepState">等待</span>
         </div>
         <div class="panel-body">
+          <div class="hint-card">
+            <strong>演示说法</strong>
+            秒杀接口只负责 Redis 原子扣减并返回“排队中”；订单真正落库由 RabbitMQ 异步消费完成，成功后通过 SSE 主动推送到页面。
+          </div>
+          <label for="seckillProductSelect">秒杀商品</label>
+          <select id="seckillProductSelect">
+            <option value="">先拉取商品列表</option>
+          </select>
           <div class="actions">
             <button id="connectPushBtn">连接 SSE</button>
             <button id="seckillBtn">发起秒杀</button>
+            <button id="redisObservationBtn" class="secondary">Redis 观察</button>
             <button id="seckillResultBtn" class="secondary">秒杀结果</button>
             <button id="ordersBtn" class="secondary">订单列表</button>
             <button id="orderDetailBtn" class="secondary">订单详情</button>
+            <button id="payOrderBtn">支付订单</button>
             <button id="adminOrdersBtn" class="secondary">管理员订单</button>
             <button id="disconnectPushBtn" class="danger">断开 SSE</button>
           </div>
@@ -689,9 +828,59 @@
               <input id="orderNo" placeholder="推送或查询后自动写入">
             </div>
           </div>
+          <div class="result-box" id="redisBox">
+            <strong>Redis 观察窗口</strong>
+            <p>创建活动后可查看库存、用户参与标记和秒杀结果 key；发起秒杀后这里会显示 Redis 扣减证据。</p>
+          </div>
           <div class="result-box" id="pushBox">
             <strong>订单推送事件</strong>
             <p>连接 SSE 后，订单服务落库成功会通过 push-service 推送结果。</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span class="step-num">B+</span>
+            <h2>可选增强</h2>
+          </div>
+          <span class="pill info">异常恢复</span>
+        </div>
+        <div class="panel-body">
+          <div class="hint-card">
+            <strong>B+ 是什么</strong>
+            这是管理员/运维视角的兜底能力，不是普通用户购物流程。用于展示 Redis 数据丢失、MQ 投递不确定、坏消息进入队列时，系统如何恢复。
+          </div>
+          <div class="actions">
+            <button id="reconcileBtn">Redis 重建库存</button>
+            <button id="publishEventsBtn" class="secondary">投递事件</button>
+            <button id="retryPublishEventBtn" class="secondary">重试投递</button>
+            <button id="deadLettersBtn" class="secondary">死信列表</button>
+            <button id="replayDeadLetterBtn" class="secondary">重放死信</button>
+          </div>
+          <div class="action-notes">
+            <div class="action-note"><strong>Redis 重建库存：</strong>按 MySQL 订单和资格记录反推 Redis 库存，证明不会凭空加库存。</div>
+            <div class="action-note"><strong>投递事件/重试投递：</strong>查看秒杀资格到 RabbitMQ 的可靠投递状态，异常时可幂等重试。</div>
+            <div class="action-note"><strong>死信列表/重放死信：</strong>坏消息不会堵住正常队列，会进入死信记录等待排查和重放。</div>
+          </div>
+          <div class="field-grid">
+            <div>
+              <label for="publishEventId">publishEventId</label>
+              <input id="publishEventId" placeholder="查询投递事件后自动写入">
+            </div>
+            <div>
+              <label for="deadLetterId">deadLetterId</label>
+              <input id="deadLetterId" placeholder="查询死信后自动写入">
+            </div>
+          </div>
+          <div class="result-box" id="recoveryBox">
+            <strong>异常恢复观察</strong>
+            <p>这里展示 B 成员新增的 Redis 库存重建、可靠投递事件和死信恢复接口。</p>
+          </div>
+          <div class="result-box" id="deadLetterBox">
+            <strong>死信记录</strong>
+            <p>先按文档向 RabbitMQ 投递一条非法消息，再点击“死信列表”即可看到记录。</p>
           </div>
         </div>
       </section>
@@ -705,6 +894,14 @@
           <span class="pill" id="aiStepState">等待</span>
         </div>
         <div class="panel-body">
+          <div class="hint-card">
+            <strong>演示说法</strong>
+            AI 回答不是凭空编造，会先读取当前商品详情作为上下文；页面下方会展示回答依据，包括价格、描述、库存和商品状态。
+          </div>
+          <label for="aiProductSelect">咨询商品</label>
+          <select id="aiProductSelect">
+            <option value="">先拉取商品列表</option>
+          </select>
           <label for="question">用户问题</label>
           <textarea id="question">这款耳机适合学生党购买吗？请结合价格、续航和使用场景给建议。</textarea>
           <div class="actions">
@@ -831,6 +1028,7 @@
       token: localStorage.getItem("token") || "",
       user: readJson("user", null),
       product: readJson("product", null),
+      products: readJson("products", []),
       activity: readJson("activity", null),
       order: readJson("order", null),
       sseAbort: null,
@@ -858,20 +1056,33 @@
       $("logoutBtn").onclick = clearSession;
       $("createProductBtn").onclick = createProduct;
       $("setStockBtn").onclick = setStock;
+      $("offlineProductBtn").onclick = offlineProduct;
+      $("refreshProductsBtn").onclick = queryProductList;
       $("createActivityBtn").onclick = createActivity;
       $("runDemoBtn").onclick = runMainDemo;
+      $("copyInitCommandBtn").onclick = copyInitCommand;
       $("resetDemoBtn").onclick = resetDemoState;
       $("connectPushBtn").onclick = connectSse;
       $("disconnectPushBtn").onclick = () => disconnectSse(true);
       $("seckillBtn").onclick = submitSeckill;
+      $("redisObservationBtn").onclick = queryRedisObservation;
       $("seckillResultBtn").onclick = querySeckillResult;
       $("ordersBtn").onclick = queryOrders;
       $("orderDetailBtn").onclick = queryOrderDetail;
+      $("payOrderBtn").onclick = payOrder;
       $("adminOrdersBtn").onclick = queryAdminOrders;
+      $("reconcileBtn").onclick = reconcileSeckillStock;
+      $("publishEventsBtn").onclick = queryPublishEvents;
+      $("retryPublishEventBtn").onclick = retryPublishEvent;
+      $("deadLettersBtn").onclick = queryDeadLetters;
+      $("replayDeadLetterBtn").onclick = replayDeadLetter;
       $("aiBtn").onclick = consultAi;
       $("productDetailBtn").onclick = queryProductDetail;
       $("activityDetailBtn").onclick = queryActivityDetail;
       $("listProductsBtn").onclick = queryProductList;
+      $("productSelect").onchange = () => selectProduct($("productSelect").value);
+      $("seckillProductSelect").onchange = () => selectProduct($("seckillProductSelect").value);
+      $("aiProductSelect").onchange = () => selectProduct($("aiProductSelect").value);
       $("clearLogBtn").onclick = clearLog;
       $("copyLogBtn").onclick = copyLog;
       ["productId", "activityId", "orderId", "orderNo", "userId"].forEach((id) => {
@@ -936,6 +1147,7 @@
       if (state.activity?.activityId) $("activityId").value = state.activity.activityId;
       if (state.order?.orderId) $("orderId").value = state.order.orderId;
       if (state.order?.orderNo) $("orderNo").value = state.order.orderNo;
+      renderProductOptions();
     }
 
     function nowLocal(offsetMinutes) {
@@ -962,11 +1174,7 @@
           elapsedMs: Math.round(performance.now() - startedAt),
           response: payload
         }, response.ok ? "api" : "error");
-        if (!response.ok || payload?.code > 0) {
-          markGateway(false);
-        } else {
-          markGateway(true);
-        }
+        markGateway(true);
         return payload;
       } catch (error) {
         writeLog(`${method} ${path}`, error.message, "error");
@@ -1049,6 +1257,7 @@
         setPill("productStepState", "商品已创建", "ok");
         setFlow("product", "active");
         updateAll();
+        queryProductList().catch((error) => writeLog("商品列表刷新失败", error.message, "error"));
       }
       return payload;
     }
@@ -1062,6 +1271,21 @@
       if (payload.code === 0) {
         setPill("productStepState", "库存已落库", "ok");
         setFlow("product", "done");
+      }
+      return payload;
+    }
+
+    async function offlineProduct() {
+      requireAdminToken();
+      const productId = requiredValue("productId", "请先选择或创建商品");
+      const payload = await api("PUT", `/api/products/${productId}/offline`, undefined, "admin");
+      if (payload.code === 0) {
+        state.product = payload.data;
+        persist("product", state.product);
+        fillProductForm(state.product);
+        setPill("productStepState", "商品已下架", "warn");
+        updateAll();
+        queryProductList().catch((error) => writeLog("商品列表刷新失败", error.message, "error"));
       }
       return payload;
     }
@@ -1084,6 +1308,7 @@
         setPill("productStepState", "活动已预热", "ok");
         setFlow("product", "done");
         updateAll();
+        queryRedisObservation().catch((error) => writeLog("Redis 观察失败", error.message, "error"));
       }
       return payload;
     }
@@ -1204,7 +1429,40 @@
         setFlow("mq", "active");
         updateAll("QUEUEING");
       }
+      queryRedisObservation().catch((error) => writeLog("Redis 观察失败", error.message, "error"));
       return payload;
+    }
+
+    async function queryRedisObservation() {
+      requireAdminToken();
+      const activityId = requiredValue("activityId", "请先创建秒杀活动");
+      const userId = $("userId").value.trim();
+      const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+      const payload = await api("GET", `/api/seckill/activities/${activityId}/redis-observation${query}`, undefined, "admin");
+      if (payload.code === 0 && payload.data) {
+        renderRedisObservation(payload.data);
+      }
+      return payload;
+    }
+
+    function renderRedisObservation(data) {
+      let resultStatus = "未写入";
+      if (data.resultValue) {
+        try {
+          resultStatus = JSON.parse(data.resultValue).status || data.resultValue;
+        } catch (_) {
+          resultStatus = data.resultValue;
+        }
+      }
+      const rows = [
+        ["库存 key", data.stockKey],
+        ["Redis 库存值", data.stockValue ?? "未找到"],
+        ["活动缓存 key", `${data.activityKey} / ${data.activityCached ? "已缓存" : "未缓存"}`],
+        ["用户标记 key", data.userKey ? `${data.userKey} / ${data.userMarked ? "已写入，说明已参与" : "未写入"}` : "未选择用户"],
+        ["结果 key", data.resultKey || "未选择用户"],
+        ["结果状态", resultStatus]
+      ];
+      $("redisBox").innerHTML = `<strong>Redis 观察窗口</strong><p>这些 key 来自秒杀服务，展示 Redis 预热、Lua 扣减、用户防重复和结果缓存。</p><pre>${escapeHtml(rows.map(([key, value]) => `${key}: ${value}`).join("\n"))}</pre>`;
     }
 
     async function querySeckillResult() {
@@ -1221,6 +1479,7 @@
         }
         updateAll(payload.data.status);
       }
+      queryRedisObservation().catch((error) => writeLog("Redis 观察失败", error.message, "error"));
       return payload;
     }
 
@@ -1255,25 +1514,131 @@
       return payload;
     }
 
+    async function payOrder() {
+      requireUserToken();
+      const orderId = requiredValue("orderId", "请先等待推送或查询订单列表");
+      const payload = await api("POST", `/api/orders/${orderId}/pay`, undefined, "user");
+      if (payload.code === 0) {
+        state.order = payload.data;
+        $("orderNo").value = payload.data.orderNo || "";
+        persist("order", state.order);
+        setFlow("mysql", "done");
+        setPill("orderStepState", "订单已支付", "ok");
+        updateAll(payload.data.status);
+        queryRedisObservation().catch((error) => writeLog("Redis 观察失败", error.message, "error"));
+      }
+      return payload;
+    }
+
     async function queryAdminOrders() {
       requireAdminToken();
-      return api("GET", "/api/orders/admin?page=1&pageSize=10&status=CREATED", undefined, "admin");
+      return api("GET", "/api/orders/admin?page=1&pageSize=10&status=PENDING_PAYMENT", undefined, "admin");
+    }
+
+    async function reconcileSeckillStock() {
+      requireAdminToken();
+      const activityId = requiredValue("activityId", "请先创建或填写秒杀活动 ID");
+      const payload = await api("POST", `/api/seckill/activities/${activityId}/reconcile`, undefined, "admin");
+      if (payload.code === 0 && payload.data) {
+        const data = payload.data;
+        const rows = [
+          ["activityId", data.activityId],
+          ["初始秒杀库存", data.initialStock],
+          ["已创建订单数", data.createdOrders],
+          ["有效预留资格数", data.activeReservations],
+          ["重建后的 Redis 库存", data.redisStock],
+          ["恢复公式", "Redis 库存 = 初始库存 - 已创建订单 - 有效预留资格"]
+        ];
+        $("recoveryBox").innerHTML = `<strong>Redis 库存重建成功</strong><p>这个接口用 MySQL 中的订单和资格记录反推 Redis 库存，说明 Redis 只是高速缓存，不是最终事实源。</p><pre>${escapeHtml(rows.map(([key, value]) => `${key}: ${value}`).join("\n"))}</pre>`;
+        queryRedisObservation().catch((error) => writeLog("Redis 观察失败", error.message, "error"));
+      }
+      return payload;
+    }
+
+    async function queryPublishEvents() {
+      requireAdminToken();
+      const payload = await api("GET", "/api/seckill/admin/publish-events?page=1&pageSize=10", undefined, "admin");
+      if (payload.code === 0) {
+        const records = payload.data?.records || [];
+        const candidate = records.find((item) => item.status !== "SENT") || records[0];
+        if (candidate?.id) $("publishEventId").value = candidate.id;
+        $("recoveryBox").innerHTML = `<strong>可靠投递事件</strong><p>秒杀资格先落 MySQL，再由后台可靠投递到 RabbitMQ；状态为 PENDING、UNKNOWN 或 DEAD 时可重试。</p>${renderRecordList(records, ["id", "messageId", "status", "retryCount", "lastError", "nextRetryAt"])}`;
+      }
+      return payload;
+    }
+
+    async function retryPublishEvent() {
+      requireAdminToken();
+      const id = requiredValue("publishEventId", "请先查询投递事件并选择 publishEventId");
+      const payload = await api("POST", `/api/seckill/admin/publish-events/${id}/retry`, undefined, "admin");
+      if (payload.code === 0 && payload.data) {
+        $("recoveryBox").innerHTML = `<strong>投递事件已重试</strong><p>重试沿用原 messageId，订单侧有唯一索引和消费日志，所以不会重复创建订单。</p>${renderRecordList([payload.data], ["id", "messageId", "status", "retryCount", "lastError", "updatedAt"])}`;
+      }
+      return payload;
+    }
+
+    async function queryDeadLetters() {
+      requireAdminToken();
+      const payload = await api("GET", "/api/orders/admin/dead-letters?page=1&pageSize=10", undefined, "admin");
+      if (payload.code === 0) {
+        const records = payload.data?.records || [];
+        if (records[0]?.id) $("deadLetterId").value = records[0].id;
+        $("deadLetterBox").innerHTML = `<strong>订单死信记录</strong><p>非法消息会被拒绝并进入死信队列，由死信消费者持久化，避免正常订单队列被堵住。</p>${renderRecordList(records, ["id", "messageId", "deathReason", "status", "replayCount", "lastError"])}`;
+      }
+      return payload;
+    }
+
+    async function replayDeadLetter() {
+      requireAdminToken();
+      const id = requiredValue("deadLetterId", "请先查询死信列表并选择 deadLetterId");
+      const payload = await api("POST", `/api/orders/admin/dead-letters/${id}/replay`, undefined, "admin");
+      if (payload.code === 0 && payload.data) {
+        $("deadLetterBox").innerHTML = `<strong>死信已重放</strong><p>如果原 payload 仍然是非法 JSON，重放后再次进入死信是正常结果；真实生产中应先修正数据或代码再重放。</p>${renderRecordList([payload.data], ["id", "messageId", "deathReason", "status", "replayCount", "lastError"])}`;
+      }
+      return payload;
+    }
+
+    function renderRecordList(records, fields) {
+      if (!records.length) {
+        return "<p>暂无记录。可以先发起一次秒杀，或按文档投递一条非法 MQ 消息后再查询。</p>";
+      }
+      const lines = records.map((record, index) => {
+        const body = fields.map((field) => `  ${field}: ${record[field] ?? "-"}`).join("\n");
+        return `#${index + 1}\n${body}`;
+      });
+      return `<pre>${escapeHtml(lines.join("\n\n"))}</pre>`;
     }
 
     async function consultAi() {
       requireUserToken();
       const productId = requiredValue("productId", "请先创建商品");
       setPill("aiStepState", "AI 请求中", "warn");
+      const basis = await api("GET", `/api/products/${productId}`, undefined, "none");
       const payload = await api("POST", `/api/ai/products/${productId}/consult`, {
         question: $("question").value.trim()
       }, "user");
       if (payload.data?.answer) {
-        $("aiBox").innerHTML = `<strong>${payload.code === 0 ? "AI 建议" : "AI 降级"}</strong><p>${escapeHtml(payload.data.answer)}</p>`;
+        $("aiBox").innerHTML = `<strong>${payload.code === 0 ? "AI 建议" : "AI 降级"}</strong><p>${escapeHtml(payload.data.answer)}</p>${renderAiBasis(basis.data)}`;
         setPill("aiStepState", payload.code === 0 ? "AI 已回答" : "明确降级", payload.code === 0 ? "ok" : "warn");
         setFlow("ai", "done");
         updateAll(undefined, payload.code === 0 ? "SUCCESS" : "FALLBACK 30001");
       }
       return payload;
+    }
+
+    function renderAiBasis(product) {
+      if (!product) return "<p><strong>回答依据：</strong>商品详情暂不可用。</p>";
+      const stock = product.stock || {};
+      const rows = [
+        ["商品名称", product.name || "-"],
+        ["商品描述", product.description || "-"],
+        ["价格", product.price ?? "-"],
+        ["商品状态", product.status || "-"],
+        ["总库存", stock.totalStock ?? "-"],
+        ["可用库存", stock.availableStock ?? "-"],
+        ["秒杀预留库存", stock.reservedStock ?? "-"]
+      ];
+      return `<p><strong>回答依据：</strong>来自 <code>GET /api/products/${escapeHtml(product.productId || "-")}</code> 的商品详情字段。</p><pre>${escapeHtml(rows.map(([key, value]) => `${key}: ${value}`).join("\n"))}</pre>`;
     }
 
     async function queryProductDetail() {
@@ -1287,7 +1652,76 @@
     }
 
     async function queryProductList() {
-      return api("GET", "/api/products?page=1&pageSize=10", undefined, "none");
+      const payload = await api("GET", "/api/products?page=1&pageSize=20", undefined, "none");
+      if (payload.code === 0) {
+        state.products = payload.data?.records || [];
+        persist("products", state.products);
+        renderProductOptions();
+        renderProductList(payload.data);
+      }
+      return payload;
+    }
+
+    function renderProductOptions() {
+      const selected = state.product?.productId ? String(state.product.productId) : "";
+      const options = [
+        `<option value="">${state.products.length ? "请选择商品" : "先拉取商品列表"}</option>`,
+        ...state.products.map((product) => {
+          const stock = product.stock || {};
+          const label = `#${product.productId} ${product.name} / ${product.status} / 可用${stock.availableStock ?? "-"} / 预留${stock.reservedStock ?? "-"}`;
+          return `<option value="${escapeHtml(product.productId)}">${escapeHtml(label)}</option>`;
+        })
+      ].join("");
+      ["productSelect", "seckillProductSelect", "aiProductSelect"].forEach((id) => {
+        if (!$(id)) return;
+        $(id).innerHTML = options;
+        $(id).value = selected;
+      });
+    }
+
+    function renderProductList(pageData) {
+      const records = pageData?.records || [];
+      if (!records.length) {
+        $("productBox").innerHTML = "<strong>商品列表</strong><p>当前没有商品。可以先创建商品。</p>";
+        return;
+      }
+      const lines = records.map((product) => {
+        const stock = product.stock || {};
+        return `#${product.productId} ${product.name} | ${product.status} | 价格=${product.price} | 总库存=${stock.totalStock ?? "-"} | 可用=${stock.availableStock ?? "-"} | 秒杀预留=${stock.reservedStock ?? "-"}`;
+      });
+      $("productBox").innerHTML = `<strong>商品列表</strong><p>选择商品后，商品 ID、库存、秒杀活动和 AI 咨询都会切换到该商品。</p><pre>${escapeHtml(lines.join("\n"))}</pre>`;
+    }
+
+    function selectProduct(productId) {
+      if (!productId) return;
+      const product = state.products.find((item) => String(item.productId) === String(productId));
+      if (!product) return;
+      state.product = product;
+      persist("product", state.product);
+      fillProductForm(product);
+      clearActivityAndOrderForProductSwitch();
+      renderProductOptions();
+      setPill("productStepState", "已选择商品", "ok");
+      setFlow("product", "active");
+      updateAll();
+      writeLog("已选择商品", product, "api");
+    }
+
+    function fillProductForm(product) {
+      $("productId").value = product.productId || "";
+      $("productName").value = product.name || "";
+      $("price").value = product.price ?? "";
+      $("description").value = product.description || "";
+      if (product.stock?.totalStock != null) $("stock").value = product.stock.totalStock;
+    }
+
+    function clearActivityAndOrderForProductSwitch() {
+      ["activity", "order"].forEach((key) => localStorage.removeItem(key));
+      state.activity = null;
+      state.order = null;
+      ["activityId", "orderId", "orderNo"].forEach((id) => $(id).value = "");
+      $("redisBox").innerHTML = "<strong>Redis 观察窗口</strong><p>切换商品后需要重新创建或选择对应秒杀活动。</p>";
+      $("pushBox").innerHTML = "<strong>订单推送事件</strong><p>切换商品后等待新的订单推送。</p>";
     }
 
     function requireAdminToken() {
@@ -1341,7 +1775,7 @@
       $("stateProduct").textContent = $("productId").value ? `${$("productName").value} / ${$("productId").value}` : "-";
       $("stateActivity").textContent = $("activityId").value ? `activityId=${$("activityId").value}, stock=${$("seckillStock").value}` : "-";
       $("stateSeckill").textContent = seckillStatus || $("stateSeckill").textContent || "-";
-      $("stateOrder").textContent = $("orderId").value ? `orderId=${$("orderId").value}, ${$("orderNo").value || "-"}` : "-";
+      $("stateOrder").textContent = $("orderId").value ? `orderId=${$("orderId").value}, ${$("orderNo").value || "-"}, ${state.order?.status || seckillStatus || "-"}` : "-";
       $("stateAi").textContent = aiStatus || $("stateAi").textContent || "-";
       $("currentRole").textContent = state.user?.role || (state.token ? "CUSTOMER" : "未登录");
       $("currentRole").className = `pill ${state.token ? "ok" : "info"}`;
@@ -1378,6 +1812,17 @@
 
     async function copyLog() {
       const text = $("log").textContent || "";
+      await copyText(text);
+      toast("日志已复制");
+    }
+
+    async function copyInitCommand() {
+      await copyText("node scripts\\init-demo-products.js");
+      toast("初始化命令已复制");
+      writeLog("初始化命令", "node scripts\\init-demo-products.js", "system");
+    }
+
+    async function copyText(text) {
       if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
       } else {
@@ -1390,7 +1835,6 @@
         document.execCommand("copy");
         textarea.remove();
       }
-      toast("日志已复制");
     }
 
     function clearSession() {
@@ -1407,12 +1851,16 @@
 
     function resetDemoState() {
       disconnectSse(false);
-      ["product", "activity", "order"].forEach((key) => localStorage.removeItem(key));
+      ["product", "products", "activity", "order"].forEach((key) => localStorage.removeItem(key));
       state.product = null;
+      state.products = [];
       state.activity = null;
       state.order = null;
       ["productId", "activityId", "orderId", "orderNo"].forEach((id) => $(id).value = "");
+      renderProductOptions();
       ["gateway", "jwt", "product", "redis", "mq", "sse", "mysql", "ai"].forEach((name) => setFlow(name, "idle"));
+      $("productBox").innerHTML = "<strong>商品列表</strong><p>点击“拉取商品列表”后，可选择不同商品用于库存、秒杀活动和 AI 咨询。</p>";
+      $("redisBox").innerHTML = "<strong>Redis 观察窗口</strong><p>创建活动后可查看库存、用户参与标记和秒杀结果 key；发起秒杀后这里会显示 Redis 扣减证据。</p>";
       $("pushBox").innerHTML = "<strong>订单推送事件</strong><p>连接 SSE 后，订单服务落库成功会通过 push-service 推送结果。</p>";
       $("aiBox").innerHTML = "<strong>AI 回答</strong><p>配置 LLM 时返回模型建议；未配置或超时时显示明确降级结果。</p>";
       setPill("productStepState", "等待", "");

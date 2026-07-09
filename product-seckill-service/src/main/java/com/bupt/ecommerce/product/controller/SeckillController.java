@@ -22,7 +22,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/seckill/activities")
@@ -86,6 +89,17 @@ public class SeckillController {
             @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
     ) {
         return ApiResponse.success(seckillService.result(activityId, resolveUserId(userId)));
+    }
+
+    @GetMapping("/{activityId}/redis-observation")
+    @Operation(summary = "Redis 观察窗口", description = "ADMIN 接口，仅用于本地演示观察秒杀 Redis key")
+    public ApiResponse<Map<String, Object>> redisObservation(
+            @PathVariable("activityId") Long activityId,
+            @RequestParam(value = "userId", required = false) Long observedUserId,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
+    ) {
+        requireAdmin(role);
+        return ApiResponse.success(seckillService.redisObservation(activityId, observedUserId));
     }
 
     private Long resolveUserId(Long userId) {

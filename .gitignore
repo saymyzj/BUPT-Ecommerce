@@ -10,3 +10,5 @@ logs/
 .env
 application-local.yml
 docs/docs-C/images/屏幕截图*.png
+scripts/demo-products-latest.json
+~$*.docx

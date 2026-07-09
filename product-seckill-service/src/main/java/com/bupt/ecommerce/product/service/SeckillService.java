@@ -36,6 +36,7 @@ import org.springframework.web.client.RestClientException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -274,6 +275,30 @@ public class SeckillService {
                 activeReservations.size(),
                 expectedStock
         );
+    }
+
+    public Map<String, Object> redisObservation(Long activityId, Long userId) {
+        activityRepository.findById(activityId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+
+        String stockKey = SeckillRedisKeys.stock(activityId);
+        String activityKey = SeckillRedisKeys.activity(activityId);
+        String userKey = userId == null ? null : SeckillRedisKeys.user(activityId, userId);
+        String resultKey = userId == null ? null : SeckillRedisKeys.result(activityId, userId);
+
+        Map<String, Object> observation = new LinkedHashMap<>();
+        observation.put("activityId", activityId);
+        observation.put("userId", userId);
+        observation.put("stockKey", stockKey);
+        observation.put("stockValue", redisTemplate.opsForValue().get(stockKey));
+        observation.put("activityKey", activityKey);
+        observation.put("activityCached", Boolean.TRUE.equals(redisTemplate.hasKey(activityKey)));
+        observation.put("activityFields", redisTemplate.opsForHash().entries(activityKey));
+        observation.put("userKey", userKey);
+        observation.put("userMarked", userKey != null && Boolean.TRUE.equals(redisTemplate.hasKey(userKey)));
+        observation.put("resultKey", resultKey);
+        observation.put("resultValue", resultKey == null ? null : redisTemplate.opsForValue().get(resultKey));
+        return observation;
     }
 
     public void preheat(SeckillActivity activity) {

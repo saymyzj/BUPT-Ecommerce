@@ -36,12 +36,14 @@ public class AiConsultService {
     private final String llmApiKey;
     private final String llmModel;
     private final StringRedisTemplate redisTemplate;
+    private final ProductFaqService productFaqService;
     private final Duration cacheTtl;
     private final Map<String, String> cache = new ConcurrentHashMap<>();
 
     public AiConsultService(
             RestTemplateBuilder restTemplateBuilder,
             StringRedisTemplate redisTemplate,
+            ProductFaqService productFaqService,
             @Value("${app.product-service.base-url:http://localhost:8082}") String productServiceBaseUrl,
             @Value("${app.llm.base-url:}") String llmBaseUrl,
             @Value("${app.llm.api-key:}") String llmApiKey,
@@ -54,6 +56,7 @@ public class AiConsultService {
                 .setReadTimeout(Duration.ofMillis(timeoutMs))
                 .build();
         this.redisTemplate = redisTemplate;
+        this.productFaqService = productFaqService;
         this.productServiceBaseUrl = productServiceBaseUrl;
         this.llmBaseUrl = llmBaseUrl == null ? "" : llmBaseUrl.strip();
         this.llmApiKey = llmApiKey == null ? "" : llmApiKey.strip();
@@ -67,10 +70,16 @@ public class AiConsultService {
         }
 
         String normalizedQuestion = question.strip();
-        String cacheKey = cacheKey(productId, normalizedQuestion);
+        ProductContext productContext = loadProductContext(productId);
+        ProductFaqService.Match faqMatch = productFaqService.classify(normalizedQuestion, productContext);
+        String cacheKey = cacheKey(productId, productContext.promptText(), productFaqService.normalizeForCache(normalizedQuestion));
         String cached = cachedAnswer(cacheKey);
         if (cached != null) {
             return ApiResponse.success(Map.of("answer", cached));
+        }
+        if (faqMatch.deterministic()) {
+            cacheAnswer(cacheKey, faqMatch.answer());
+            return ApiResponse.success(Map.of("answer", faqMatch.answer()));
         }
 
         if (llmBaseUrl.isBlank() || llmApiKey.isBlank()) {
@@ -78,8 +87,7 @@ public class AiConsultService {
         }
 
         try {
-            String productContext = loadProductContext(productId);
-            String answer = requestLlm(productContext, normalizedQuestion);
+            String answer = requestLlm(productContext.promptText(), normalizedQuestion);
             cacheAnswer(cacheKey, answer);
             return ApiResponse.success(Map.of("answer", answer));
         } catch (RuntimeException ex) {
@@ -89,16 +97,19 @@ public class AiConsultService {
     }
 
     @SuppressWarnings("unchecked")
-    private String loadProductContext(Long productId) {
+    private ProductContext loadProductContext(Long productId) {
         try {
             ApiResponse<?> response = restTemplate.getForObject(
                     productServiceBaseUrl + "/api/products/" + productId,
                     ApiResponse.class
             );
             Object data = response == null ? null : response.data();
-            return Objects.toString(data, "商品信息暂不可用");
+            if (data instanceof Map<?, ?> map) {
+                return ProductContext.from((Map<String, Object>) map, productId);
+            }
+            return ProductContext.unavailable(productId);
         } catch (RestClientException ex) {
-            return "商品信息暂不可用，productId=" + productId;
+            return ProductContext.unavailable(productId);
         }
     }
 
@@ -114,6 +125,9 @@ public class AiConsultService {
                         Map.of(
                                 "role", "system",
                                 "content", "你是电商商品导购助手。只能基于给定商品上下文回答，回答要简洁、可执行。"
+                                        + "不得编造库存、销量、物流、优惠、紧迫性或平台承诺。"
+                                        + "只有上下文明确提供库存时才能引用库存数字；否则必须说库存未提供。"
+                                        + "禁止使用“仅剩”“马上抢”“现货紧张”等未由上下文证明的表达。"
                         ),
                         Map.of(
                                 "role", "user",
@@ -173,8 +187,8 @@ public class AiConsultService {
         }
     }
 
-    private String cacheKey(Long productId, String question) {
-        return "ai:product:qa:" + productId + ":" + sha256(question.toLowerCase());
+    private String cacheKey(Long productId, String productContext, String question) {
+        return "ai:product:qa:v2:" + productId + ":" + sha256(productContext + "\n" + question.toLowerCase());
     }
 
     private String sha256(String value) {

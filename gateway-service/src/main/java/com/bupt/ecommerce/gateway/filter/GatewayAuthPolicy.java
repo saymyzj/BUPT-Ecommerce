@@ -40,11 +40,9 @@ public class GatewayAuthPolicy {
                 || (HttpMethod.POST.equals(method) && "/api/products".equals(path))
                 || (HttpMethod.PUT.equals(method) && path.matches("^/api/products/[^/]+/stock$"))
                 || (HttpMethod.PUT.equals(method) && path.matches("^/api/products/[^/]+/offline$"))
-                || (HttpMethod.POST.equals(method) && "/api/seckill/activities".equals(path))) {
-            return Role.ADMIN;
-        }
-        if (HttpMethod.POST.equals(method)
-                && path.matches("^/api/seckill/activities/[^/]+/reconcile$")) {
+                || (HttpMethod.POST.equals(method) && "/api/seckill/activities".equals(path))
+                || (HttpMethod.POST.equals(method) && path.matches("^/api/seckill/activities/[^/]+/reconcile$"))
+                || (HttpMethod.GET.equals(method) && path.matches("^/api/seckill/activities/[^/]+/redis-observation$"))) {
             return Role.ADMIN;
         }
         return Role.CUSTOMER;

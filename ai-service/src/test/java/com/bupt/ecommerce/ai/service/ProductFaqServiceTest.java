@@ -52,6 +52,18 @@ class ProductFaqServiceTest {
     }
 
     @Test
+    void recommendationQuestionShouldReturnConcreteBasis() {
+        ProductFaqService.Match match = service.classify("这款耳机适合学生党购买吗？请结合价格、续航和使用场景给建议。", product);
+
+        assertEquals(ProductFaqService.QuestionCategory.SUITABILITY, match.category());
+        assertTrue(match.answer().contains("结论"));
+        assertTrue(match.answer().contains("199"));
+        assertTrue(match.answer().contains("适合日常学习和通勤"));
+        assertTrue(match.answer().contains("12 件可用库存"));
+        assertTrue(match.answer().contains("保修"));
+    }
+
+    @Test
     void unrelatedQuestionShouldFallThroughToRag() {
         ProductFaqService.Match match = service.classify("帮我总结商品特点", product);
 

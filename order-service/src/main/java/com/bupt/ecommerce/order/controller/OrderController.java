@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -59,6 +60,15 @@ public class OrderController {
             @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
     ) {
         return ApiResponse.success(orderService.detail(orderId, resolveUserId(userId)));
+    }
+
+    @PostMapping("/{orderId}/pay")
+    @Operation(summary = "支付订单", description = "CUSTOMER 接口，演示订单从待支付变为已支付")
+    public ApiResponse<OrderResponse> pay(
+            @PathVariable("orderId") Long orderId,
+            @RequestHeader(value = AuthHeaders.USER_ID, required = false) Long userId
+    ) {
+        return ApiResponse.success(orderService.pay(orderId, resolveUserId(userId)));
     }
 
     @GetMapping("/admin")

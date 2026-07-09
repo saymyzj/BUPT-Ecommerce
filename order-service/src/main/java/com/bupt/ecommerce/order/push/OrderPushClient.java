@@ -46,7 +46,7 @@ public class OrderPushClient {
                 order.getOrderNo(),
                 order.getUserId(),
                 order.getStatus().name(),
-                "订单创建成功"
+                "订单创建成功，待支付"
         );
         try {
             HttpHeaders headers = new HttpHeaders();

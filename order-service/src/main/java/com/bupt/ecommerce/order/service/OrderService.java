@@ -119,7 +119,7 @@ public class OrderService {
         order.setOrderNo(message.orderNo());
         order.setUserId(message.userId());
         order.setActivityId(message.activityId());
-        order.setStatus(OrderStatus.CREATED);
+        order.setStatus(OrderStatus.PENDING_PAYMENT);
         order.setTotalAmount(message.seckillPrice().multiply(BigDecimal.valueOf(message.quantity())));
         order.setCreatedAt(now);
         order.setUpdatedAt(now);
@@ -172,7 +172,7 @@ public class OrderService {
                 order.getStatus().name(),
                 order.getId(),
                 order.getOrderNo(),
-                "订单创建成功"
+                resultMessage(order.getStatus())
         );
         try {
             String value = objectMapper.writeValueAsString(result);
@@ -273,7 +273,7 @@ public class OrderService {
                         order.getStatus().name(),
                         order.getId(),
                         order.getOrderNo(),
-                        "订单创建成功"
+                        resultMessage(order.getStatus())
                 ))
                 .orElseGet(() -> new SeckillResultResponse(activityId, "QUEUEING", null, null, "queued"));
     }
@@ -304,6 +304,26 @@ public class OrderService {
         }
         List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
         return OrderResponse.from(order, items);
+    }
+
+    @Transactional
+    public OrderResponse pay(Long orderId, Long userId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (!order.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (order.getStatus() == OrderStatus.PAID) {
+            return OrderResponse.from(order, orderItemRepository.findByOrderId(orderId));
+        }
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT && order.getStatus() != OrderStatus.CREATED) {
+            throw new BusinessException(ErrorCode.CONFLICT);
+        }
+        order.setStatus(OrderStatus.PAID);
+        order.setUpdatedAt(LocalDateTime.now());
+        Order saved = orderRepository.save(order);
+        writeCreatedResult(saved);
+        return OrderResponse.from(saved, orderItemRepository.findByOrderId(orderId));
     }
 
     @Transactional(readOnly = true)
@@ -387,5 +407,15 @@ public class OrderService {
         } catch (JsonProcessingException ex) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR);
         }
+    }
+
+    private String resultMessage(OrderStatus status) {
+        if (status == OrderStatus.PENDING_PAYMENT) {
+            return "订单创建成功，待支付";
+        }
+        if (status == OrderStatus.PAID) {
+            return "订单已支付";
+        }
+        return "订单创建成功";
     }
 }

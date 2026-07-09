@@ -25,6 +25,17 @@ record ProductContext(
         );
     }
 
+    static ProductContext unavailable(Long productId) {
+        return new ProductContext(
+                productId,
+                "当前商品",
+                "商品详情暂不可用",
+                null,
+                "UNKNOWN",
+                null
+        );
+    }
+
     String promptText() {
         return "商品ID：" + productId
                 + "\n商品名称：" + name

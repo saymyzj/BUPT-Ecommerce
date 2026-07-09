@@ -21,7 +21,7 @@ class AiConsultServiceTest {
     void missingLlmConfigShouldReturnAiUnavailableWithAnswerOnly() {
         AiConsultService service = service("", "", redisWithoutCache(), 100);
 
-        ApiResponse<Map<String, Object>> response = service.consult(20001L, "适合学生买吗");
+        ApiResponse<Map<String, Object>> response = service.consult(20001L, "帮我总结商品特点");
 
         assertEquals(ErrorCode.AI_UNAVAILABLE.code(), response.code());
         assertEquals(ErrorCode.AI_UNAVAILABLE.message(), response.message());
@@ -37,7 +37,7 @@ class AiConsultServiceTest {
         when(valueOperations.get(anyString())).thenReturn("cached answer");
         AiConsultService service = service("", "", redisTemplate, 100);
 
-        ApiResponse<Map<String, Object>> response = service.consult(20001L, "适合学生买吗");
+        ApiResponse<Map<String, Object>> response = service.consult(20001L, "帮我总结商品特点");
 
         assertEquals(ErrorCode.SUCCESS.code(), response.code());
         assertEquals("cached answer", response.data().get("answer"));
@@ -57,7 +57,7 @@ class AiConsultServiceTest {
     void productContextAndLlmFailureShouldReturnExplicitFallback() {
         AiConsultService service = service("http://127.0.0.1:1", "test-key", redisWithoutCache(), 50);
 
-        ApiResponse<Map<String, Object>> response = service.consult(20001L, "适合学生买吗");
+        ApiResponse<Map<String, Object>> response = service.consult(20001L, "帮我总结商品特点");
 
         assertEquals(ErrorCode.AI_UNAVAILABLE.code(), response.code());
         assertNotNull(response.data().get("answer"));
@@ -68,6 +68,7 @@ class AiConsultServiceTest {
         return new AiConsultService(
                 new RestTemplateBuilder(),
                 redisTemplate,
+                new ProductFaqService(),
                 "http://127.0.0.1:1",
                 llmBaseUrl,
                 llmApiKey,

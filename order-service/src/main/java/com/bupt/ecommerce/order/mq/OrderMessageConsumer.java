@@ -3,6 +3,7 @@ package com.bupt.ecommerce.order.mq;
 import com.bupt.ecommerce.order.config.RabbitMqConfig;
 import com.bupt.ecommerce.order.dto.OrderCreateMessage;
 import com.bupt.ecommerce.order.entity.Order;
+import com.bupt.ecommerce.order.exception.ReservationUnavailableException;
 import com.bupt.ecommerce.order.push.OrderPushClient;
 import com.bupt.ecommerce.order.service.OrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,8 +50,11 @@ public class OrderMessageConsumer {
             orderPushClient.publishCreated(order);
             channel.basicAck(deliveryTag, false);
             log.info("created seckill order orderNo={} messageId={}", order.getOrderNo(), message.messageId());
+        } catch (ReservationUnavailableException ex) {
+            channel.basicAck(deliveryTag, false);
+            log.warn("ignored terminal seckill reservation messageId={}", message.messageId());
         } catch (Exception ex) {
-            orderService.markMessageFailed(message, payload);
+            orderService.markMessageFailed(message, payload, ex);
             log.error("failed to consume seckill order message={}", message.messageId(), ex);
             throw ex;
         }

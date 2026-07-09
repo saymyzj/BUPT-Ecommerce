@@ -14,11 +14,14 @@ import com.bupt.ecommerce.product.entity.ProductStatus;
 import com.bupt.ecommerce.product.entity.ProductStock;
 import com.bupt.ecommerce.product.entity.SeckillActivity;
 import com.bupt.ecommerce.product.entity.SeckillActivityStatus;
+import com.bupt.ecommerce.product.entity.SeckillReservation;
+import com.bupt.ecommerce.product.entity.SeckillReservationStatus;
 import com.bupt.ecommerce.product.mq.OrderMessagePublisher;
 import com.bupt.ecommerce.product.redis.SeckillRedisKeys;
 import com.bupt.ecommerce.product.repository.ProductRepository;
 import com.bupt.ecommerce.product.repository.ProductStockRepository;
 import com.bupt.ecommerce.product.repository.SeckillActivityRepository;
+import com.bupt.ecommerce.product.repository.SeckillReservationRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -77,6 +80,7 @@ public class SeckillService {
     private final ProductRepository productRepository;
     private final ProductStockRepository stockRepository;
     private final SeckillActivityRepository activityRepository;
+    private final SeckillReservationRepository reservationRepository;
     private final StringRedisTemplate redisTemplate;
     private final OrderMessagePublisher orderMessagePublisher;
     private final ObjectMapper objectMapper;
@@ -89,6 +93,7 @@ public class SeckillService {
             ProductRepository productRepository,
             ProductStockRepository stockRepository,
             SeckillActivityRepository activityRepository,
+            SeckillReservationRepository reservationRepository,
             StringRedisTemplate redisTemplate,
             OrderMessagePublisher orderMessagePublisher,
             ObjectMapper objectMapper,
@@ -100,6 +105,7 @@ public class SeckillService {
         this.productRepository = productRepository;
         this.stockRepository = stockRepository;
         this.activityRepository = activityRepository;
+        this.reservationRepository = reservationRepository;
         this.redisTemplate = redisTemplate;
         this.orderMessagePublisher = orderMessagePublisher;
         this.objectMapper = objectMapper;
@@ -157,6 +163,9 @@ public class SeckillService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         preheatIfAbsent(activity);
 
+        String requestId = UUID.randomUUID().toString();
+        String messageId = UUID.randomUUID().toString();
+        String orderNo = generateOrderNo();
         String queueingResult = writeResultJson(new SeckillResultResponse(activityId, "QUEUEING", null, null, "queued"));
         Long result = redisTemplate.execute(
                 new DefaultRedisScript<>(LUA_SCRIPT, Long.class),
@@ -174,21 +183,24 @@ public class SeckillService {
         mapLuaFailure(result);
 
         OrderCreateMessage message = new OrderCreateMessage(
-                UUID.randomUUID().toString(),
+                messageId,
                 EVENT_TYPE,
                 activityId,
                 userId,
                 activity.getProductId(),
                 request.quantity(),
                 activity.getSeckillPrice(),
-                generateOrderNo(),
-                LocalDateTime.now()
+                orderNo,
+                LocalDateTime.now(),
+                requestId
         );
         try {
+            createReservation(message);
             orderMessagePublisher.publish(message);
             return new SeckillQueuedResponse(activityId, "QUEUEING");
         } catch (RuntimeException ex) {
             rollbackRedis(activityId, userId);
+            markReservationReleased(message, ex);
             throw new BusinessException(ErrorCode.MQ_PUBLISH_FAILED);
         }
     }
@@ -271,6 +283,42 @@ public class SeckillService {
         redisTemplate.delete(SeckillRedisKeys.user(activityId, userId));
         String failed = writeResultJson(new SeckillResultResponse(activityId, "FAILED", null, null, "MQ 投递失败"));
         redisTemplate.opsForValue().set(SeckillRedisKeys.result(activityId, userId), failed, Duration.ofSeconds(resultTtlSeconds));
+    }
+
+    private void createReservation(OrderCreateMessage message) {
+        LocalDateTime now = LocalDateTime.now();
+        SeckillReservation reservation = new SeckillReservation();
+        reservation.setRequestId(message.requestId());
+        reservation.setMessageId(message.messageId());
+        reservation.setActivityId(message.activityId());
+        reservation.setUserId(message.userId());
+        reservation.setProductId(message.productId());
+        reservation.setOrderNo(message.orderNo());
+        reservation.setStatus(SeckillReservationStatus.RESERVED);
+        reservation.setRetryCount(0);
+        reservation.setCreatedAt(now);
+        reservation.setUpdatedAt(now);
+        reservationRepository.save(reservation);
+    }
+
+    private void markReservationReleased(OrderCreateMessage message, RuntimeException failure) {
+        reservationRepository.findByMessageId(message.messageId()).ifPresent(reservation -> {
+            LocalDateTime now = LocalDateTime.now();
+            reservation.setStatus(SeckillReservationStatus.RELEASED);
+            reservation.setFailureCode("MQ_PUBLISH_FAILED");
+            reservation.setFailureReason(limitMessage(failure));
+            reservation.setReleasedAt(now);
+            reservation.setUpdatedAt(now);
+            reservationRepository.save(reservation);
+        });
+    }
+
+    private String limitMessage(Throwable failure) {
+        String message = failure.getMessage();
+        if (message == null || message.isBlank()) {
+            return failure.getClass().getSimpleName();
+        }
+        return message.length() <= 500 ? message : message.substring(0, 500);
     }
 
     private void reserveStock(ProductStock stock, Integer seckillStock, LocalDateTime now) {

@@ -12,6 +12,20 @@ public record OrderCreateMessage(
         Integer quantity,
         BigDecimal seckillPrice,
         String orderNo,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        String requestId
 ) {
+    public OrderCreateMessage(
+            String messageId,
+            String eventType,
+            Long activityId,
+            Long userId,
+            Long productId,
+            Integer quantity,
+            BigDecimal seckillPrice,
+            String orderNo,
+            LocalDateTime createdAt
+    ) {
+        this(messageId, eventType, activityId, userId, productId, quantity, seckillPrice, orderNo, createdAt, messageId);
+    }
 }

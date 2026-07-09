@@ -13,6 +13,7 @@ import com.bupt.ecommerce.product.redis.SeckillRedisKeys;
 import com.bupt.ecommerce.product.repository.ProductRepository;
 import com.bupt.ecommerce.product.repository.ProductStockRepository;
 import com.bupt.ecommerce.product.repository.SeckillActivityRepository;
+import com.bupt.ecommerce.product.repository.SeckillReservationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,6 +53,7 @@ class SeckillServiceTest {
                 productRepository,
                 stockRepository,
                 activityRepository,
+                mock(SeckillReservationRepository.class),
                 redisTemplate,
                 orderMessagePublisher,
                 new ObjectMapper(),

@@ -44,6 +44,9 @@ app:
   seckill:
     user-flag-ttl-seconds: 14400
     result-ttl-seconds: 86400
+  seckill-publisher:
+    fixed-delay-ms: 5000
+    max-attempts: 12
 
 management:
   endpoints:

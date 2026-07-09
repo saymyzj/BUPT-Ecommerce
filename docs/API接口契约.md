@@ -276,6 +276,16 @@ GET /api/seckill/activities/{activityId}/result
 
 权限：`CUSTOMER`
 
+### 5.5 管理员重建秒杀库存
+
+```text
+POST /api/seckill/activities/{activityId}/reconcile
+```
+
+权限：`ADMIN`
+
+说明：根据 MySQL 已创建订单和有效资格记录重建 Redis 库存与用户参与标记。该接口只用于 Redis 恢复和验收演示，不改变原秒杀接口。
+
 ## 6. 订单接口
 
 ### 6.1 订单列表
@@ -316,6 +326,34 @@ GET /api/orders/internal/seckill-result?activityId=1&userId=10001
 2. 调用方必须携带内部服务头 `X-Internal-Token`，token 值通过 `INTERNAL_SERVICE_TOKEN` 配置。
 3. Gateway 入口直接拦截 `/api/orders/internal/**`，客户端和 Apifox 演示流程不直接调用该接口。
 4. 对外查询秒杀结果仍使用 `GET /api/seckill/activities/{activityId}/result`。
+
+### 6.5 内部秒杀对账
+
+```text
+GET /api/orders/internal/seckill-accounting?activityId=1
+```
+
+权限：`INTERNAL`
+
+说明：仅供 `product-seckill-service` 重建 Redis 库存时查询活动已创建订单数，Gateway 禁止外部访问。
+
+### 6.6 管理员查询订单死信
+
+```text
+GET /api/orders/admin/dead-letters?page=1&pageSize=20
+```
+
+权限：`ADMIN`
+
+### 6.7 管理员重放订单死信
+
+```text
+POST /api/orders/admin/dead-letters/{id}/replay
+```
+
+权限：`ADMIN`
+
+说明：重放保持原 `messageId`，依赖订单服务幂等约束防止重复订单。
 
 ## 7. AI 咨询接口
 
@@ -401,4 +439,3 @@ endTime
 5. 权限标记
 6. 错误码语义
 7. 分页字段名
-

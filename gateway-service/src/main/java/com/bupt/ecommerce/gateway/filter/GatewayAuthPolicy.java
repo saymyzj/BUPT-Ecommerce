@@ -35,11 +35,15 @@ public class GatewayAuthPolicy {
     }
 
     public Role requiredRole(HttpMethod method, String path) {
-        if ((HttpMethod.POST.equals(method) && "/api/products".equals(path))
+        if (path.startsWith("/api/orders/admin")
+                || (HttpMethod.POST.equals(method) && "/api/products".equals(path))
                 || (HttpMethod.PUT.equals(method) && path.matches("^/api/products/[^/]+/stock$"))
                 || (HttpMethod.PUT.equals(method) && path.matches("^/api/products/[^/]+/offline$"))
-                || (HttpMethod.POST.equals(method) && "/api/seckill/activities".equals(path))
-                || (HttpMethod.GET.equals(method) && path.startsWith("/api/orders/admin"))) {
+                || (HttpMethod.POST.equals(method) && "/api/seckill/activities".equals(path))) {
+            return Role.ADMIN;
+        }
+        if (HttpMethod.POST.equals(method)
+                && path.matches("^/api/seckill/activities/[^/]+/reconcile$")) {
             return Role.ADMIN;
         }
         return Role.CUSTOMER;

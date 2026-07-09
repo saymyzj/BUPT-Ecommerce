@@ -8,6 +8,7 @@ import com.bupt.ecommerce.common.security.AuthHeaders;
 import com.bupt.ecommerce.common.security.Role;
 import com.bupt.ecommerce.order.dto.OrderResponse;
 import com.bupt.ecommerce.order.dto.SeckillResultResponse;
+import com.bupt.ecommerce.order.dto.SeckillAccountingResponse;
 import com.bupt.ecommerce.order.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -81,6 +82,16 @@ public class OrderController {
     ) {
         requireInternalToken(token);
         return ApiResponse.success(orderService.findSeckillResult(activityId, userId));
+    }
+
+    @GetMapping("/internal/seckill-accounting")
+    @Operation(summary = "内部查询秒杀对账数据", description = "服务间接口，返回活动已创建订单数")
+    public ApiResponse<SeckillAccountingResponse> seckillAccounting(
+            @RequestParam("activityId") Long activityId,
+            @RequestHeader(value = AuthHeaders.INTERNAL_TOKEN, required = false) String token
+    ) {
+        requireInternalToken(token);
+        return ApiResponse.success(orderService.accounting(activityId));
     }
 
     private Long resolveUserId(Long userId) {

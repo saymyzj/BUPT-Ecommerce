@@ -9,14 +9,15 @@ import com.bupt.ecommerce.product.dto.SeckillActivityResponse;
 import com.bupt.ecommerce.product.dto.SeckillQueuedResponse;
 import com.bupt.ecommerce.product.dto.SeckillRequest;
 import com.bupt.ecommerce.product.dto.SeckillResultResponse;
+import com.bupt.ecommerce.product.dto.SeckillReconcileResponse;
 import com.bupt.ecommerce.product.entity.Product;
 import com.bupt.ecommerce.product.entity.ProductStatus;
 import com.bupt.ecommerce.product.entity.ProductStock;
 import com.bupt.ecommerce.product.entity.SeckillActivity;
 import com.bupt.ecommerce.product.entity.SeckillActivityStatus;
+import com.bupt.ecommerce.product.entity.SeckillPublishEvent;
 import com.bupt.ecommerce.product.entity.SeckillReservation;
 import com.bupt.ecommerce.product.entity.SeckillReservationStatus;
-import com.bupt.ecommerce.product.mq.OrderMessagePublisher;
 import com.bupt.ecommerce.product.redis.SeckillRedisKeys;
 import com.bupt.ecommerce.product.repository.ProductRepository;
 import com.bupt.ecommerce.product.repository.ProductStockRepository;
@@ -82,7 +83,8 @@ public class SeckillService {
     private final SeckillActivityRepository activityRepository;
     private final SeckillReservationRepository reservationRepository;
     private final StringRedisTemplate redisTemplate;
-    private final OrderMessagePublisher orderMessagePublisher;
+    private final SeckillAdmissionService admissionService;
+    private final ReliableOrderPublisher reliableOrderPublisher;
     private final ObjectMapper objectMapper;
     private final RestClient orderServiceClient;
     private final String internalToken;
@@ -95,7 +97,8 @@ public class SeckillService {
             SeckillActivityRepository activityRepository,
             SeckillReservationRepository reservationRepository,
             StringRedisTemplate redisTemplate,
-            OrderMessagePublisher orderMessagePublisher,
+            SeckillAdmissionService admissionService,
+            ReliableOrderPublisher reliableOrderPublisher,
             ObjectMapper objectMapper,
             @Value("${app.order-service.base-url}") String orderServiceBaseUrl,
             @Value("${app.internal.token}") String internalToken,
@@ -107,7 +110,8 @@ public class SeckillService {
         this.activityRepository = activityRepository;
         this.reservationRepository = reservationRepository;
         this.redisTemplate = redisTemplate;
-        this.orderMessagePublisher = orderMessagePublisher;
+        this.admissionService = admissionService;
+        this.reliableOrderPublisher = reliableOrderPublisher;
         this.objectMapper = objectMapper;
         this.orderServiceClient = RestClient.builder().baseUrl(orderServiceBaseUrl).build();
         this.internalToken = internalToken;
@@ -194,15 +198,15 @@ public class SeckillService {
                 LocalDateTime.now(),
                 requestId
         );
+        SeckillPublishEvent event;
         try {
-            createReservation(message);
-            orderMessagePublisher.publish(message);
-            return new SeckillQueuedResponse(activityId, "QUEUEING");
+            event = admissionService.persistAdmission(message);
         } catch (RuntimeException ex) {
             rollbackRedis(activityId, userId);
-            markReservationReleased(message, ex);
             throw new BusinessException(ErrorCode.MQ_PUBLISH_FAILED);
         }
+        reliableOrderPublisher.publishNow(event, message);
+        return new SeckillQueuedResponse(activityId, "QUEUEING");
     }
 
     public SeckillResultResponse result(Long activityId, Long userId) {
@@ -215,6 +219,51 @@ public class SeckillService {
         } catch (JsonProcessingException ex) {
             throw new BusinessException(ErrorCode.INTERNAL_ERROR);
         }
+    }
+
+    public SeckillReconcileResponse reconcile(Long activityId) {
+        SeckillActivity activity = activityRepository.findById(activityId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        long createdOrders = queryCreatedOrderCount(activityId);
+        List<SeckillReservationStatus> activeStatuses = List.of(
+                SeckillReservationStatus.RESERVED,
+                SeckillReservationStatus.ORDERING,
+                SeckillReservationStatus.RETRYING,
+                SeckillReservationStatus.RELEASE_PENDING,
+                SeckillReservationStatus.DEAD
+        );
+        List<SeckillReservation> activeReservations =
+                reservationRepository.findByActivityIdAndStatusIn(activityId, activeStatuses);
+        int expectedStock = (int) Math.max(
+                0,
+                (long) activity.getSeckillStock() - createdOrders - activeReservations.size()
+        );
+
+        redisTemplate.opsForValue().set(SeckillRedisKeys.stock(activityId), String.valueOf(expectedStock));
+        cacheActivity(activity);
+        List<SeckillReservationStatus> protectedStatuses = List.of(
+                SeckillReservationStatus.RESERVED,
+                SeckillReservationStatus.ORDERING,
+                SeckillReservationStatus.CREATED,
+                SeckillReservationStatus.RETRYING,
+                SeckillReservationStatus.RELEASE_PENDING,
+                SeckillReservationStatus.DEAD
+        );
+        for (SeckillReservation reservation :
+                reservationRepository.findByActivityIdAndStatusIn(activityId, protectedStatuses)) {
+            redisTemplate.opsForValue().set(
+                    SeckillRedisKeys.user(activityId, reservation.getUserId()),
+                    "1",
+                    Duration.ofSeconds(userFlagTtlSeconds)
+            );
+        }
+        return new SeckillReconcileResponse(
+                activityId,
+                activity.getSeckillStock(),
+                createdOrders,
+                activeReservations.size(),
+                expectedStock
+        );
     }
 
     public void preheat(SeckillActivity activity) {
@@ -274,6 +323,29 @@ public class SeckillService {
         }
     }
 
+    private long queryCreatedOrderCount(Long activityId) {
+        try {
+            String value = orderServiceClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/api/orders/internal/seckill-accounting")
+                            .queryParam("activityId", activityId)
+                            .build())
+                    .header(AuthHeaders.INTERNAL_TOKEN, internalToken)
+                    .retrieve()
+                    .body(String.class);
+            if (value == null || value.isBlank()) {
+                throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+            }
+            var root = objectMapper.readTree(value);
+            if (root.path("code").asInt(-1) != 0 || root.path("data").isMissingNode()) {
+                throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+            }
+            return root.path("data").path("createdOrders").asLong();
+        } catch (RestClientException | JsonProcessingException ex) {
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR);
+        }
+    }
+
     private SeckillResultResponse queueingResult(Long activityId) {
         return new SeckillResultResponse(activityId, "QUEUEING", null, null, "queued");
     }
@@ -283,42 +355,6 @@ public class SeckillService {
         redisTemplate.delete(SeckillRedisKeys.user(activityId, userId));
         String failed = writeResultJson(new SeckillResultResponse(activityId, "FAILED", null, null, "MQ 投递失败"));
         redisTemplate.opsForValue().set(SeckillRedisKeys.result(activityId, userId), failed, Duration.ofSeconds(resultTtlSeconds));
-    }
-
-    private void createReservation(OrderCreateMessage message) {
-        LocalDateTime now = LocalDateTime.now();
-        SeckillReservation reservation = new SeckillReservation();
-        reservation.setRequestId(message.requestId());
-        reservation.setMessageId(message.messageId());
-        reservation.setActivityId(message.activityId());
-        reservation.setUserId(message.userId());
-        reservation.setProductId(message.productId());
-        reservation.setOrderNo(message.orderNo());
-        reservation.setStatus(SeckillReservationStatus.RESERVED);
-        reservation.setRetryCount(0);
-        reservation.setCreatedAt(now);
-        reservation.setUpdatedAt(now);
-        reservationRepository.save(reservation);
-    }
-
-    private void markReservationReleased(OrderCreateMessage message, RuntimeException failure) {
-        reservationRepository.findByMessageId(message.messageId()).ifPresent(reservation -> {
-            LocalDateTime now = LocalDateTime.now();
-            reservation.setStatus(SeckillReservationStatus.RELEASED);
-            reservation.setFailureCode("MQ_PUBLISH_FAILED");
-            reservation.setFailureReason(limitMessage(failure));
-            reservation.setReleasedAt(now);
-            reservation.setUpdatedAt(now);
-            reservationRepository.save(reservation);
-        });
-    }
-
-    private String limitMessage(Throwable failure) {
-        String message = failure.getMessage();
-        if (message == null || message.isBlank()) {
-            return failure.getClass().getSimpleName();
-        }
-        return message.length() <= 500 ? message : message.substring(0, 500);
     }
 
     private void reserveStock(ProductStock stock, Integer seckillStock, LocalDateTime now) {

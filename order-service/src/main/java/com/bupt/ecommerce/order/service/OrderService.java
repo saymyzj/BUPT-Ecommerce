@@ -6,6 +6,7 @@ import com.bupt.ecommerce.common.exception.BusinessException;
 import com.bupt.ecommerce.order.dto.OrderCreateMessage;
 import com.bupt.ecommerce.order.dto.OrderResponse;
 import com.bupt.ecommerce.order.dto.SeckillResultResponse;
+import com.bupt.ecommerce.order.dto.SeckillAccountingResponse;
 import com.bupt.ecommerce.order.entity.MqMessageLog;
 import com.bupt.ecommerce.order.entity.MqMessageStatus;
 import com.bupt.ecommerce.order.entity.Order;
@@ -275,6 +276,11 @@ public class OrderService {
                         "订单创建成功"
                 ))
                 .orElseGet(() -> new SeckillResultResponse(activityId, "QUEUEING", null, null, "queued"));
+    }
+
+    @Transactional(readOnly = true)
+    public SeckillAccountingResponse accounting(Long activityId) {
+        return new SeckillAccountingResponse(activityId, orderRepository.countByActivityId(activityId));
     }
 
     @Transactional(readOnly = true)

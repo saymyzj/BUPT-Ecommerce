@@ -5,6 +5,7 @@ import com.bupt.ecommerce.order.dto.OrderCreateMessage;
 import com.bupt.ecommerce.order.entity.Order;
 import com.bupt.ecommerce.order.exception.ReservationUnavailableException;
 import com.bupt.ecommerce.order.push.OrderPushClient;
+import com.bupt.ecommerce.order.service.DeadLetterService;
 import com.bupt.ecommerce.order.service.OrderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rabbitmq.client.Channel;
@@ -25,11 +26,18 @@ public class OrderMessageConsumer {
 
     private final OrderService orderService;
     private final OrderPushClient orderPushClient;
+    private final DeadLetterService deadLetterService;
     private final ObjectMapper objectMapper;
 
-    public OrderMessageConsumer(OrderService orderService, OrderPushClient orderPushClient, ObjectMapper objectMapper) {
+    public OrderMessageConsumer(
+            OrderService orderService,
+            OrderPushClient orderPushClient,
+            DeadLetterService deadLetterService,
+            ObjectMapper objectMapper
+    ) {
         this.orderService = orderService;
         this.orderPushClient = orderPushClient;
+        this.deadLetterService = deadLetterService;
         this.objectMapper = objectMapper;
     }
 
@@ -48,6 +56,7 @@ public class OrderMessageConsumer {
             Order order = orderService.createFromMessage(message, payload);
             orderService.writeCreatedResult(order);
             orderPushClient.publishCreated(order);
+            deadLetterService.markResolved(message.messageId());
             channel.basicAck(deliveryTag, false);
             log.info("created seckill order orderNo={} messageId={}", order.getOrderNo(), message.messageId());
         } catch (ReservationUnavailableException ex) {

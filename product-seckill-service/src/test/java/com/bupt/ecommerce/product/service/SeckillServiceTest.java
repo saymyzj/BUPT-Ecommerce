@@ -8,7 +8,6 @@ import com.bupt.ecommerce.product.entity.Product;
 import com.bupt.ecommerce.product.entity.ProductStatus;
 import com.bupt.ecommerce.product.entity.SeckillActivity;
 import com.bupt.ecommerce.product.entity.SeckillActivityStatus;
-import com.bupt.ecommerce.product.mq.OrderMessagePublisher;
 import com.bupt.ecommerce.product.redis.SeckillRedisKeys;
 import com.bupt.ecommerce.product.repository.ProductRepository;
 import com.bupt.ecommerce.product.repository.ProductStockRepository;
@@ -39,7 +38,8 @@ class SeckillServiceTest {
     private SeckillActivityRepository activityRepository;
     private ProductRepository productRepository;
     private StringRedisTemplate redisTemplate;
-    private OrderMessagePublisher orderMessagePublisher;
+    private SeckillAdmissionService admissionService;
+    private ReliableOrderPublisher reliableOrderPublisher;
     private SeckillService seckillService;
 
     @BeforeEach
@@ -48,14 +48,16 @@ class SeckillServiceTest {
         ProductStockRepository stockRepository = mock(ProductStockRepository.class);
         activityRepository = mock(SeckillActivityRepository.class);
         redisTemplate = mock(StringRedisTemplate.class);
-        orderMessagePublisher = mock(OrderMessagePublisher.class);
+        admissionService = mock(SeckillAdmissionService.class);
+        reliableOrderPublisher = mock(ReliableOrderPublisher.class);
         seckillService = new SeckillService(
                 productRepository,
                 stockRepository,
                 activityRepository,
                 mock(SeckillReservationRepository.class),
                 redisTemplate,
-                orderMessagePublisher,
+                admissionService,
+                reliableOrderPublisher,
                 new ObjectMapper(),
                 "http://localhost:8083",
                 "internal-token",
@@ -84,7 +86,7 @@ class SeckillServiceTest {
                 () -> seckillService.seckill(1L, 10001L, new SeckillRequest(1)));
 
         assertEquals(expectedCode, ex.getCode());
-        verifyNoInteractions(orderMessagePublisher);
+        verifyNoInteractions(admissionService, reliableOrderPublisher);
     }
 
     @Test

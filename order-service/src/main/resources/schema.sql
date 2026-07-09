@@ -62,3 +62,18 @@ CREATE TABLE IF NOT EXISTS seckill_reservations (
   KEY idx_seckill_reservations_status_retry (status, next_retry_at),
   KEY idx_seckill_reservations_activity (activity_id)
 );
+
+CREATE TABLE IF NOT EXISTS dead_letter_records (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  message_id VARCHAR(80) NOT NULL,
+  payload TEXT NOT NULL,
+  death_reason VARCHAR(512) NULL,
+  status VARCHAR(20) NOT NULL,
+  replay_count INT NOT NULL DEFAULT 0,
+  last_error VARCHAR(512) NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  UNIQUE KEY uk_dead_letter_records_message_id (message_id),
+  KEY idx_dead_letter_records_status (status),
+  KEY idx_dead_letter_records_updated_at (updated_at)
+);

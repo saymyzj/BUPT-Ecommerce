@@ -10,6 +10,7 @@ import com.bupt.ecommerce.product.dto.SeckillActivityResponse;
 import com.bupt.ecommerce.product.dto.SeckillQueuedResponse;
 import com.bupt.ecommerce.product.dto.SeckillRequest;
 import com.bupt.ecommerce.product.dto.SeckillResultResponse;
+import com.bupt.ecommerce.product.dto.SeckillReconcileResponse;
 import com.bupt.ecommerce.product.service.SeckillService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -56,6 +57,16 @@ public class SeckillController {
     @Operation(summary = "秒杀活动详情", description = "PUBLIC 接口，查询秒杀活动详情")
     public ApiResponse<SeckillActivityResponse> detail(@PathVariable("activityId") Long activityId) {
         return ApiResponse.success(seckillService.detail(activityId));
+    }
+
+    @PostMapping("/{activityId}/reconcile")
+    @Operation(summary = "重建秒杀库存", description = "ADMIN 接口，按订单与资格记录重建 Redis 库存")
+    public ApiResponse<SeckillReconcileResponse> reconcile(
+            @PathVariable("activityId") Long activityId,
+            @RequestHeader(value = AuthHeaders.ROLE, required = false) String role
+    ) {
+        requireAdmin(role);
+        return ApiResponse.success(seckillService.reconcile(activityId));
     }
 
     @PostMapping("/{activityId}/orders")

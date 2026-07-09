@@ -120,25 +120,25 @@
   Scope: order-service、Redis 内部补偿接口
   Validation: 重复补偿十次只返一次，订单存在时不返库存
 
-- [-] 完成第一批兼容回归、提交并推送
+- [x] 完成第一批兼容回归、提交并推送
   Scope: 全模块、Git
   Validation: 测试通过，默认演示路径不变，远程分支包含提交
 
 ### Batch 2
 
-- [ ] 建立 DLQ 记录、查询、重放和终态闭环
+- [x] 建立 DLQ 记录、查询、重放和终态闭环
   Scope: order-service、Gateway 兼容路由、RabbitMQ
   Validation: 非法/失败消息进入死信并可幂等重放
 
-- [ ] 增加可靠投递状态和 Confirm 不确定对账
+- [x] 增加可靠投递状态和 Confirm 不确定对账
   Scope: product-seckill-service、RabbitMQ、schema
   Validation: 模拟 Confirm 超时但消息到达时不返库存、不重复订单
 
-- [ ] 增加 Redis Sentinel 环境和库存恢复/对账
+- [x] 增加 Redis Sentinel 环境和库存恢复/对账
   Scope: Compose、product-seckill-service、order-service、docs
   Validation: 默认 Compose 不变；Sentinel 主节点切换后恢复；库存可重建
 
-- [ ] 完成第二批兼容回归、提交并推送
+- [-] 完成第二批兼容回归、提交并推送
   Scope: 全模块、Git
   Validation: 测试通过，成员 A/C 正常链路回归，远程分支包含提交
 
@@ -175,3 +175,5 @@
 - 2026-07-09：`feature/member-b-seckill-order` 可从 `dev` 快进，未跟踪的两份报告文档不纳入提交。
 - 2026-07-09：默认演示兼容优先于默认开启新行为；候补和 Sentinel 使用独立配置。
 - 2026-07-09：第一批全仓库测试通过，共覆盖 Gateway、用户、秒杀、订单、AI 和推送模块；使用 Java 21 运行 Maven 以兼容当前 Mockito/Byte Buddy。
+- 2026-07-09：第一批提交 `ad38088` 已推送至 `origin/feature/member-b-seckill-order`。
+- 2026-07-09：第二批新增接口均为管理员或内部接口；旧 API、MQ 拓扑、SSE 事件和默认 Compose 未改变。核心模块测试及 HA Compose 配置校验通过。
